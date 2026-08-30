@@ -1,16 +1,14 @@
 import streamlit as st
 import time
 import re
-import asyncio
 from PIL import Image
 from google import genai
 from google.genai import types
-import edge_tts
-from moviepy.editor import VideoFileClip, AudioFileClip, vfx
+from moviepy.editor import VideoFileClip, concatenate_videoclips
 import imageio_ffmpeg
 import moviepy.config as mp_config
 
-# Konfigurasi MoviePy
+# Konfigurasi MoviePy untuk penggabungan video final
 mp_config.ffmpeg_binary = imageio_ffmpeg.get_ffmpeg_exe()
 
 # --- KONFIGURASI KUNCI API ---
@@ -21,16 +19,11 @@ except Exception:
 
 client = genai.Client(api_key=API_KEY)
 
-# Fungsi membuat suara narasi lengkap
-async def buat_suara(teks, nama_file):
-    communicate = edge_tts.Communicate(teks, "id-ID-GadisNeural")
-    await communicate.save(nama_file)
-
 # --- ANTARMUKA PENGGUNA (UI) ---
 st.set_page_config(page_title="Tutor Pintar Rigil", page_icon="🎓", layout="centered")
 
-st.title("🎓 Tutor Pintar Rigil (Edisi Hybrid Premium)")
-st.write("Aplikasi AI yang menghasilkan video animasi edukasi utuh dengan durasi lengkap!")
+st.title("🎓 Tutor Pintar Rigil (True Doodle Sync)")
+st.write("Video papan tulis animasi di mana gambar dan suara dihasilkan bersamaan oleh AI agar sinkron sempurna!")
 
 with st.form("user_form"):
     nama = st.text_input("Nama Siswa:", "Rigil")
@@ -41,7 +34,7 @@ with st.form("user_form"):
     ], index=2)
     mapel = st.text_input("Mata Pelajaran:", "Matematika")
     uploaded_file = st.file_uploader("Foto Halaman Buku Pelajaran:", type=["jpg", "jpeg", "png"])
-    submit_button = st.form_submit_button(label="Mulai Belajar! 🎬")
+    submit_button = st.form_submit_button(label="Buat Video Sinkron! 🎬")
 
 # --- PROSES UTAMA ---
 if submit_button:
@@ -52,116 +45,91 @@ if submit_button:
         with col1:
             st.image(image, caption="Buku Pelajaran Asli", use_container_width=True)
         with col2:
-            st.info("✨ **Halo " + nama + "!** AI sedang menyusun materi utuh dan merender animasinya...")
+            st.info("✨ **Halo " + nama + "!** AI sedang memecah materi menjadi adegan animasi papan tulis...")
             
-        # TAHAP 1: PEMAHAMAN AI & NASKAH LENGKAP
-        with st.spinner("1. Menganalisis materi dan menulis naskah lengkap..."):
-            maksimal_coba = 3
-            berhasil_baca = False
-            video_prompt = ""
-            naskah_audio = ""
-            
-            for percobaan in range(maksimal_coba):
-                try:
-                    if "SD" in jenjang_kelas:
-                        gaya = "ramah, ceria, dan sangat pelan agar mudah dimengerti anak-anak."
-                    else:
-                        gaya = "komunikatif, asik, dan relevan dengan dunia remaja."
+        # TAHAP 1: MEMECAH MATERI MENJADI ADEGAN (SCENE)
+        with st.spinner("1. Menyiapkan instruksi visual dan suara (Backend)..."):
+            try:
+                # Instruksi ketat untuk AI agar HANYA membuat gaya Whiteboard Doodle
+                visual_lock = "Visual style: Authentic whiteboard animation. A real human hand holding a black marker drawing simple 2D stick figures and line art on a white canvas. No 3D, no motion graphics, strictly hand-drawn doodle sketch style."
+                
+                ux_bridge_prompt = (
+                    "Kamu adalah Tutor AI cerdas. Baca materi " + mapel + " ini untuk siswa " + jenjang_kelas + " bernama " + nama + ".\n"
+                    "Keluarkan hasil dalam format ini:\n\n"
+                    "===RINGKASAN===\n(Tulis rangkuman ramah untuk " + nama + ")\n\n"
+                    "===SCENE_1_PROMPT===\n(Tulis prompt BAHASA INGGRIS untuk AI Video. Instruksi wajib: 'Create a video explaining [KONSEP AWAL]. " + visual_lock + " Audio style: Indonesian voiceover saying Halo " + nama + ", [JELASKAN KONSEP AWAL SECARA SINGKAT]. Audio and drawing motion must perfectly sync.')\n\n"
+                    "===SCENE_2_PROMPT===\n(Tulis prompt BAHASA INGGRIS untuk AI Video. Instruksi wajib: 'Create a video explaining [INTI MATERI]. " + visual_lock + " Audio style: Indonesian voiceover explaining [JELASKAN INTI MATERI]. Audio and drawing motion must perfectly sync.')"
+                )
+                
+                response = client.models.generate_content(
+                    model='gemini-3.6-flash',
+                    contents=[ux_bridge_prompt, image]
+                )
+                full_text = response.text
+                
+                ringkasan = "Materi berhasil dipahami."
+                prompt_scene_1 = "Create a whiteboard animation."
+                prompt_scene_2 = "Create a whiteboard animation."
+                
+                if "===RINGKASAN===" in full_text:
+                    match_r = re.search(r'===RINGKASAN===(.*?)(?====SCENE_1_PROMPT===|$)', full_text, re.DOTALL)
+                    if match_r: ringkasan = match_r.group(1).strip()
+                if "===SCENE_1_PROMPT===" in full_text:
+                    match_1 = re.search(r'===SCENE_1_PROMPT===(.*?)(?====SCENE_2_PROMPT===|$)', full_text, re.DOTALL)
+                    if match_1: prompt_scene_1 = match_1.group(1).strip()
+                if "===SCENE_2_PROMPT===" in full_text:
+                    match_2 = re.search(r'===SCENE_2_PROMPT===(.*)', full_text, re.DOTALL)
+                    if match_2: prompt_scene_2 = match_2.group(1).strip()
 
-                    # UX Bridge Prompt ditambahkan instruksi Naskah Audio
-                    ux_bridge_prompt = (
-                        "Kamu adalah Tutor AI cerdas. Baca foto buku " + mapel + " ini untuk siswa " + jenjang_kelas + " bernama " + nama + ".\n"
-                        "Keluarkan persis 4 bagian berikut:\n\n"
-                        "===RINGKASAN_MATERI===\n(Tulis rangkuman materi dengan gaya " + gaya + ")\n\n"
-                        "===KUIS_INTERAKTIF===\n(Berikan 1 soal kuis latihan)\n\n"
-                        "===NASKAH_AUDIO===\n(Tulis naskah lisan penjelasan materi secara sangat lengkap dari awal sampai akhir, seolah guru sedang mengajar. Sapa " + nama + " di awal. Durasi bacaan sekitar 30-60 detik. HANYA TEKS yang dibaca, tanpa simbol.)\n\n"
-                        "===MASTER_PROMPT_VIDEO===\n(Tulis SATU instruksi BAHASA INGGRIS untuk AI Video Generator: 'Create an educational video explaining [MATERI]. Visual style: 3-color doodle animation, dynamic whiteboard drawing.')"
-                    )
-                    
-                    response = client.models.generate_content(
-                        model='gemini-3.6-flash',
-                        contents=[ux_bridge_prompt, image]
-                    )
-                    full_text = response.text
-                    
-                    # Parsing teks aman
-                    ringkasan = "Materi telah dipahami."
-                    kuis = "Ayo belajar!"
-                    naskah_audio = "Halo " + nama + "! Mari kita mulai belajar."
-                    video_prompt = "Create a high quality educational doodle animation."
-                    
-                    if "===RINGKASAN_MATERI===" in full_text:
-                        match_r = re.search(r'===RINGKASAN_MATERI===(.*?)(?====KUIS_INTERAKTIF===|$)', full_text, re.DOTALL)
-                        if match_r: ringkasan = match_r.group(1).strip()
-                    if "===KUIS_INTERAKTIF===" in full_text:
-                        match_k = re.search(r'===KUIS_INTERAKTIF===(.*?)(?====NASKAH_AUDIO===|$)', full_text, re.DOTALL)
-                        if match_k: kuis = match_k.group(1).strip()
-                    if "===NASKAH_AUDIO===" in full_text:
-                        match_n = re.search(r'===NASKAH_AUDIO===(.*?)(?====MASTER_PROMPT_VIDEO===|$)', full_text, re.DOTALL)
-                        if match_n: naskah_audio = match_n.group(1).strip()
-                    if "===MASTER_PROMPT_VIDEO===" in full_text:
-                        match_p = re.search(r'===MASTER_PROMPT_VIDEO===(.*)', full_text, re.DOTALL)
-                        if match_p: video_prompt = match_p.group(1).strip()
-
-                    st.markdown("---")
-                    st.markdown("## 📚 Rangkuman Materi (" + mapel + ")")
-                    st.markdown(ringkasan)
-                    st.markdown("---")
-                    st.markdown("## 🏆 Kuis Tantangan untuk " + nama + "!")
-                    st.markdown(kuis)
-                    
-                    berhasil_baca = True
-                    break 
-                    
-                except Exception as e:
-                    if "503" in str(e) and percobaan < maksimal_coba - 1:
-                        time.sleep(5)
-                    else:
-                        st.error("Gagal saat menganalisis materi: " + str(e))
-                        st.stop()
+                st.markdown("---")
+                st.markdown("## 📚 Rangkuman Materi (" + mapel + ")")
+                st.markdown(ringkasan)
+                
+            except Exception as e:
+                st.error("Gagal saat merancang adegan: " + str(e))
+                st.stop()
                         
-        # TAHAP 2: RENDER VIDEO & PENGGABUNGAN AUDIO PENUH
-        if berhasil_baca:
-            with st.spinner("2. Menyatukan Suara Lengkap & Klip Animasi AI... (Memakan waktu sekitar 1-3 menit)"):
-                try:
-                    # A. Buat Audio Lengkap dari Naskah
-                    teks_bersih = re.sub(r'[*#_`>-]', '', naskah_audio)
-                    file_suara = "suara_premium.mp3"
-                    asyncio.run(buat_suara(teks_bersih, file_suara))
-                    audio_clip = AudioFileClip(file_suara)
-                    durasi_total = audio_clip.duration
-                    
-                    # B. Generate Klip Video AI (8 Detik)
-                    operation = client.models.generate_videos(
-                        model="veo-3.1-fast-generate-preview",
-                        prompt=video_prompt,
-                        config=types.GenerateVideosConfig(resolution="720p")
-                    )
-                    
-                    while not operation.done:
-                        time.sleep(5)
-                        operation = client.operations.get(operation)
-                    
-                    vid_result = operation.result.generated_videos[0]
-                    file_veo_mentah = "veo_mentah.mp4"
-                    client.files.download(file=vid_result.video)
-                    vid_result.video.save(file_veo_mentah)
-                    
-                    # C. Penggabungan Hybrid (MoviePy melooping video 8 detik agar sepanjang audio)
-                    veo_clip = VideoFileClip(file_veo_mentah)
-                    # Looping video agar durasinya sama dengan durasi audio lisan
-                    looped_video = veo_clip.fx(vfx.loop, duration=durasi_total)
-                    final_video = looped_video.set_audio(audio_clip)
-                    
-                    file_video_final = "hasil_animasi_premium_lengkap.mp4"
-                    final_video.write_videofile(file_video_final, fps=24, codec="libx264", audio_codec="aac", logger=None)
-                    
-                    st.markdown("---")
-                    st.markdown("## 🎬 Video Pembelajaran Lengkap:")
-                    st.video(file_video_final)
-                    
-                except Exception as e:
-                    st.error("Gagal merender video akhir: " + str(e))
+        # TAHAP 2: RENDER VIDEO SINKRON & PENGGABUNGAN
+        with st.spinner("2. Merender klip Doodle tersinkronisasi... (Estimasi: 3-5 Menit)"):
+            try:
+                # Render Scene 1
+                op_1 = client.models.generate_videos(
+                    model="veo-3.1-fast-generate-preview", prompt=prompt_scene_1, config=types.GenerateVideosConfig(resolution="720p")
+                )
+                while not op_1.done:
+                    time.sleep(5)
+                    op_1 = client.operations.get(op_1)
+                vid_1 = op_1.result.generated_videos[0]
+                file_1 = "scene1.mp4"
+                client.files.download(file=vid_1.video)
+                vid_1.video.save(file_1)
+                
+                # Render Scene 2
+                op_2 = client.models.generate_videos(
+                    model="veo-3.1-fast-generate-preview", prompt=prompt_scene_2, config=types.GenerateVideosConfig(resolution="720p")
+                )
+                while not op_2.done:
+                    time.sleep(5)
+                    op_2 = client.operations.get(op_2)
+                vid_2 = op_2.result.generated_videos[0]
+                file_2 = "scene2.mp4"
+                client.files.download(file=vid_2.video)
+                vid_2.video.save(file_2)
+                
+                # Menggabungkan kedua scene menjadi video utuh
+                clip_1 = VideoFileClip(file_1)
+                clip_2 = VideoFileClip(file_2)
+                final_video = concatenate_videoclips([clip_1, clip_2])
+                
+                file_video_final = "doodle_sinkron_final.mp4"
+                final_video.write_videofile(file_video_final, fps=24, codec="libx264", audio_codec="aac", logger=None)
+                
+                st.markdown("---")
+                st.markdown("## 🎬 Video Whiteboard Doodle (Audio & Visual Sinkron):")
+                st.video(file_video_final)
+                
+            except Exception as e:
+                st.error("Gagal merender video akhir: " + str(e))
                 
     else:
         st.warning("Silakan unggah foto halaman bukunya dulu!")
