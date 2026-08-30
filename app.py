@@ -3,6 +3,7 @@ import time
 from PIL import Image
 from google import genai
 from google.genai import types
+import re # Tambahkan library Regex agar parsing teks sangat aman
 
 # --- KONFIGURASI KUNCI API ---
 try:
@@ -51,7 +52,7 @@ if submit_button:
                 else:
                     gaya = "profesional, logis, terstruktur, dan akademis."
 
-                # Ini adalah UX Bridge: Mengubah gambar buku menjadi ringkasan, kuis, dan PROMPT VIDEO BAHASA INGGRIS
+                # UX Bridge: Instruksi tersembunyi
                 ux_bridge_prompt = f"""
                 Kamu adalah Tutor AI cerdas. Baca dan pahami foto halaman buku {mapel} ini untuk siswa bernama {nama} tingkat {jenjang_kelas}.
                 Keluarkan persis 3 bagian berikut:
@@ -73,6 +74,62 @@ if submit_button:
                 )
                 full_text = response.text
                 
-                # Memilah hasil dari UX Bridge
-                ringkasan = full_text.split("===RINGKASAN_MATERI===")[1].split("===KUIS_INTERAKTIF===")[0].strip() if "===RINGKASAN_MATERI===" in full_text else "Materi telah dipahami."
-                kuis = full_text.split("===KUIS_INTERAKTIF===")[1].split("===MASTER_PROMPT_VIDEO===")[0].strip() if "===KUIS_INTERAKT
+                # CARA PARSING BARU YANG 100% AMAN (Bebas error baris terpotong)
+                ringkasan = "Materi telah dipahami."
+                kuis = "Ayo belajar!"
+                video_prompt = "Create an educational doodle animation."
+                
+                if "===RINGKASAN_MATERI===" in full_text:
+                    match_ringkasan = re.search(r'===RINGKASAN_MATERI===(.*?)(?====KUIS_INTERAKTIF===|$)', full_text, re.DOTALL)
+                    if match_ringkasan: ringkasan = match_ringkasan.group(1).strip()
+                    
+                if "===KUIS_INTERAKTIF===" in full_text:
+                    match_kuis = re.search(r'===KUIS_INTERAKTIF===(.*?)(?====MASTER_PROMPT_VIDEO===|$)', full_text, re.DOTALL)
+                    if match_kuis: kuis = match_kuis.group(1).strip()
+                    
+                if "===MASTER_PROMPT_VIDEO===" in full_text:
+                    match_prompt = re.search(r'===MASTER_PROMPT_VIDEO===(.*)', full_text, re.DOTALL)
+                    if match_prompt: video_prompt = match_prompt.group(1).strip()
+
+                # Tampilkan ke UI
+                st.markdown("---")
+                st.markdown(f"## 📚 Rangkuman Materi ({mapel})")
+                st.markdown(ringkasan)
+                
+                st.markdown("---")
+                st.markdown(f"## 🏆 Kuis Tantangan untuk {nama}!")
+                st.markdown(kuis)
+                
+            except Exception as e:
+                st.error(f"Terjadi kesalahan saat AI membaca materi: {e}")
+                st.stop()
+                
+        # TAHAP 2: GENERATE VIDEO (VISUAL & AUDIO OTOMATIS)
+        with st.spinner("2. Merender Video Animasi Doodle 3 Warna... (Ini memakan waktu sekitar 1-2 menit)"):
+            try:
+                operation = client.models.generate_videos(
+                    model="veo-3.1-fast-generate-preview",
+                    prompt=video_prompt,
+                    config=types.GenerateVideosConfig(
+                        resolution="720p"
+                    )
+                )
+                
+                while not operation.done:
+                    time.sleep(5)
+                    operation = client.operations.get(operation)
+                
+                vid_result = operation.result.generated_videos[0]
+                file_video_final = "hasil_animasi_doodle.mp4"
+                client.files.download(file=vid_result.video)
+                vid_result.video.save(file_video_final)
+                
+                st.markdown("---")
+                st.markdown(f"## 🎬 Video Pembelajaran Khusus {nama}:")
+                st.video(file_video_final)
+                
+            except Exception as e:
+                st.error(f"Terjadi kendala pada mesin AI Video Generator: {e}")
+                
+    else:
+        st.warning("Silakan unggah foto halaman bukunya terlebih dahulu!")
