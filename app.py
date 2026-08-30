@@ -32,7 +32,7 @@ def buat_suara_premium(teks, nama_file, pilihan_suara):
         model="tts-1",
         voice=pilihan_suara,
         input=teks,
-        speed=0.5  # <-- Kecepatan dilambatkan 50% agar sangat santai dan mudah diikuti
+        speed=0.75  # <-- Kecepatan diatur 25% lebih lambat dari normal (titik paling pas)
     )
     response.stream_to_file(nama_file)
 
