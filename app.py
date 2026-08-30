@@ -1,6 +1,11 @@
 import streamlit as st
 import google.generativeai as genai
 from PIL import Image, ImageDraw
+
+# --- PENAMBAL KOMPATIBILITAS PIL/PILLOW TERBARU ---
+if not hasattr(Image, 'ANTIALIAS'):
+    Image.ANTIALIAS = Image.Resampling.LANCZOS
+
 import edge_tts
 import asyncio
 from moviepy.editor import ImageClip, AudioFileClip, concatenate_videoclips
@@ -22,7 +27,6 @@ model = genai.GenerativeModel('gemini-3.5-flash-lite')
 
 # --- FUNGSI PEMBUAT SLIDE ILUSTRASI & DOODLE OTOMATIS ---
 def buat_slide_storyboard(judul, visual_desc, teks_narasi, nomor_scene, total_scene, nama_file):
-    # Kanvas latar belakang ceria gaya papan tulis digital / doodle
     img = Image.new('RGB', (1280, 720), color=(245, 247, 250))
     d = ImageDraw.Draw(img)
     
@@ -34,7 +38,6 @@ def buat_slide_storyboard(judul, visual_desc, teks_narasi, nomor_scene, total_sc
     d.rectangle([50, 150, 1230, 320], fill=(235, 247, 248), outline=(52, 152, 219), width=2)
     d.text((80, 170), "💡 Konsep Ilustrasi / Animasi Doodle:", fill=(41, 128, 185))
     
-    # Format teks ilustrasi visual
     vis_words = visual_desc.split()
     vis_lines, current_v_line = [], ""
     for w in vis_words:
@@ -54,7 +57,6 @@ def buat_slide_storyboard(judul, visual_desc, teks_narasi, nomor_scene, total_sc
     d.rectangle([50, 340, 1230, 610], fill=(255, 255, 255), outline=(189, 195, 199), width=2)
     d.text((80, 360), "🎙️ Naskah Narasi Suara Guru:", fill=(39, 174, 96))
     
-    # Format teks narasi
     nar_words = teks_narasi.split()
     nar_lines, current_n_line = [], ""
     for w in nar_words:
@@ -119,7 +121,6 @@ if submit_button:
                 else:
                     gaya = "profesional, logis, terstruktur, dan akademis."
 
-                # Master Prompt Otomatis di dalam Sistem AI
                 prompt = f"""
                 Kamu adalah AI Education Director dan Master Storyboarder untuk siswa bernama {nama} tingkat {jenjang_kelas} belajar {mapel}.
                 1. Analisis materi di foto halaman buku tersebut secara mendalam.
@@ -139,7 +140,6 @@ if submit_button:
                 st.markdown(f"### 📜 Storyboard & Naskah Animasi ({mapel})")
                 st.markdown(teks_jawaban)
                 
-                # Parsing Scene Berdasarkan Pemisah ---SCENE---
                 raw_scenes = [s.strip() for s in teks_jawaban.split('---SCENE---') if s.strip()]
                 if not raw_scenes:
                     raw_scenes = [teks_jawaban]
@@ -164,7 +164,6 @@ if submit_button:
                 
                 combined_audio_script = " ".join(full_narration_list)
                 
-                # Render Audio Keseluruhan
                 file_suara = "suara_materi.mp3"
                 asyncio.run(buat_suara_realistis(combined_audio_script, file_suara))
                 
@@ -172,7 +171,6 @@ if submit_button:
                 total_duration = audio_clip.duration
                 durasi_per_scene = total_duration / len(scene_data)
                 
-                # Render Klip Animasi Video dengan Efek Zoom Dinamis
                 video_clips = []
                 for i, scene in enumerate(scene_data):
                     slide_path = buat_slide_storyboard(
@@ -185,7 +183,6 @@ if submit_button:
                     )
                     
                     slide_clip = ImageClip(slide_path).set_duration(durasi_per_scene)
-                    # Efek animasi perbesaran dinamis (Ken Burns effect)
                     animated_clip = slide_clip.resize(lambda t: 1.0 + 0.03 * (t / durasi_per_scene))
                     video_clips.append(animated_clip)
                 
