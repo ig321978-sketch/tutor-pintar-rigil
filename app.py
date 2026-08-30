@@ -19,7 +19,7 @@ except Exception:
     GEMINI_API_KEY = "MASUKKAN_API_KEY_ANDA_DI_SINI"
 
 genai.configure(api_key=GEMINI_API_KEY)
-model = genai.GenerativeModel('gemini-3.5-flash-lite')
+model = genai.GenerativeModel('gemini-1.5-flash')
 
 # --- FUNGSI PEMBUAT SLIDE VISUAL DINAMIS ---
 def buat_slide_dinamis(judul, teks_cerita, nomor_scene, total_scene, nama_file):
@@ -141,15 +141,15 @@ if submit_button:
                 jumlah_scene = len(scene_list)
                 durasi_per_scene = total_duration / jumlah_scene
                 
-                # Render Klip Slide Multi-Scene Aktif
+                # Render Klip Slide Multi-Scene Aktif (Menggunakan set_duration & set_audio untuk MoviePy v1.0.3)
                 video_clips = []
                 for i, scene_teks in enumerate(scene_list):
                     slide_path = buat_slide_dinamis(f"Materi {mapel} ({jenjang_kelas})", scene_teks, i+1, jumlah_scene, f"scene_{i+1}.jpg")
-                    slide_clip = ImageClip(slide_path).with_duration(durasi_per_scene)
+                    slide_clip = ImageClip(slide_path).set_duration(durasi_per_scene)
                     video_clips.append(slide_clip)
                 
                 final_visual_clip = concatenate_videoclips(video_clips)
-                final_video = final_visual_clip.with_audio(audio_clip)
+                final_video = final_visual_clip.set_audio(audio_clip)
                 
                 file_video = "video_presentasi.mp4"
                 final_video.write_videofile(file_video, fps=24, codec="libx264", audio_codec="aac", logger=None)
