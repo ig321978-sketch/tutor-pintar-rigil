@@ -22,31 +22,31 @@ except Exception:
 
 client = genai.Client(api_key=API_KEY)
 
-# --- FUNGSI ANIMASI GRAFIS DINAMIS (BEBAS KUOTA API VIDEO) ---
+# --- FUNGSI ILUSTRASI GRAFIS EDUKATIF ---
 def buat_frame_animasi(judul, teks_scene, nomor_scene, total_scene, nama_file):
     img = Image.new('RGB', (1280, 720), color=(240, 244, 248))
     d = ImageDraw.Draw(img)
     
     # Header Atas
     d.rectangle([0, 0, 1280, 110], fill=(41, 128, 185))
-    d.text((50, 40), f"🎓 {judul} — Adegan {nomor_scene} dari {total_scene}", fill=(255, 255, 255))
+    d.text((50, 40), f"🎓 {judul} — Bagian {nomor_scene} dari {total_scene}", fill=(255, 255, 255))
     
-    # Panel Visual Animasi Konsep (Kotak Simulasi Objek Belajar)
+    # Panel Ilustrasi Visual Konsep
     d.rectangle([60, 140, 600, 580], fill=(255, 255, 255), outline=(52, 152, 219), width=4)
-    d.text((90, 170), "📊 Ilustrasi & Blok Konsep Animasi:", fill=(41, 128, 185))
+    d.text((90, 170), "📊 Visualisasi & Konsep Materi:", fill=(41, 128, 185))
     
-    # Render kotak-kotak visual bergerak/simulasi objek matematika
+    # Simulasi Blok Objek / Diagram Pembelajaran
     start_x, start_y = 110, 240
     for row in range(2):
         for col in range(4):
             bx = start_x + (col * 110)
             by = start_y + (row * 110)
             d.rectangle([bx, by, bx + 90, by + 90], fill=(235, 247, 248), outline=(41, 128, 185), width=2)
-            d.text((bx + 35, bx + 35), f"⭐", fill=(230, 126, 34))
+            d.text((bx + 35, bx + 35), f"💡", fill=(230, 126, 34))
 
     # Panel Penjelasan Teks Kanan
     d.rectangle([630, 140, 1220, 580], fill=(255, 255, 255), outline=(189, 195, 199), width=3)
-    d.text((660, 170), "💡 Penjelasan Langkah:", fill=(39, 174, 96))
+    d.text((660, 170), "📝 Penjelasan Konsep:", fill=(39, 174, 96))
     
     words = teks_scene.split()
     lines, current_line = [], ""
@@ -65,7 +65,7 @@ def buat_frame_animasi(judul, teks_scene, nomor_scene, total_scene, nama_file):
         
     # Footer Bawah
     d.rectangle([0, 630, 1280, 720], fill=(236, 240, 241))
-    d.text((50, 660), "✨ Tutor Pintar AI — Video Animasi Ilustrasi Interaktif", fill=(127, 140, 141))
+    d.text((50, 660), "✨ Tutor Pintar AI — Belajar Asik & Interaktif", fill=(127, 140, 141))
     
     img.save(nama_file)
     return nama_file
@@ -77,18 +77,18 @@ async def buat_suara_realistis(teks, nama_file):
 st.set_page_config(page_title="Tutor Pintar AI", page_icon="🎓", layout="centered")
 
 st.title("🎓 Tutor Pintar AI - Video Animasi Pembelajaran")
-st.write("Unggah foto halaman buku, AI akan menganalisis materi di backend dan merender video animasinya secara instan tanpa batas kuota!")
+st.write("Unggah foto halaman buku, pilih nama & kelasmu, dan biarkan AI meracik materi serta videonya secara otomatis!")
 
 with st.form("user_form"):
-    nama = st.text_input("Nama Siswa:", "Rigil Atriani")
+    nama = st.text_input("Nama Siswa:", "Udin")
     jenjang_kelas = st.selectbox("Jenjang & Kelas:", [
         "SD - Kelas 1", "SD - Kelas 2", "SD - Kelas 3", "SD - Kelas 4", "SD - Kelas 5", "SD - Kelas 6",
-        "SMP - Kelas 7", "SMP - Kelas 8", "SMP - Kelas 9",
+        "SMP - Kelas 7", "SMP - Kelas 8 (Kelas 2 SLTP)", "SMP - Kelas 9",
         "SMA - Kelas 10", "SMA - Kelas 11", "SMA - Kelas 12"
-    ], index=2)
+    ], index=7) # Default diset ke SMP Kelas 8 untuk Udin
     mapel = st.text_input("Mata Pelajaran:", "Matematika")
     uploaded_file = st.file_uploader("Foto Halaman Buku Pelajaran:", type=["jpg", "jpeg", "png"])
-    submit_button = st.form_submit_button(label="Buat Video Animasi Sekarang! 🎬")
+    submit_button = st.form_submit_button(label="Buat Video & Rangkuman Sekarang! 🎬")
 
 if submit_button:
     if uploaded_file is not None:
@@ -98,36 +98,38 @@ if submit_button:
         with col1:
             st.image(image, caption="Buku Pelajaran Asli", use_container_width=True)
         with col2:
-            st.info(f"✨ **Halo {nama}!** AI sedang menganalisis materi dan menyusun skrip video.")
+            st.info(f"✨ **Halo {nama}!**\nTutor AI sedang menyiapkan penjelasan khusus untuk tingkat **{jenjang_kelas}** pada mapel **{mapel}**.")
         
-        with st.spinner("Menganalisis materi di backend & merender video animasi..."):
+        with st.spinner("Menganalisis materi buku & merender video pembelajaran..."):
             try:
+                # Logika Penyesuaian Gaya Berdasarkan Jenjang Siswa
                 if "SD" in jenjang_kelas:
                     gaya = "ramah, ceria, menggunakan analogi sehari-hari yang seru untuk anak-anak."
                 elif "SMP" in jenjang_kelas:
-                    gaya = "komunikatif, asik, dan relevan dengan dunia remaja."
+                    gaya = "komunikatif, asik, santai, dan sangat relevan dengan keseharian remaja seusia SLTP."
                 else:
-                    gaya = "profesional, logis, terstruktur, dan akademis."
+                    gaya = "profesional, logis, terstruktur, dan akademis untuk siswa menengah atas."
 
-                # Prompt Backend Terstruktur
+                # Prompt Otomatis yang menyesuaikan nama dan kelas Udin
                 prompt = f"""
-                Kamu adalah guru les privat profesional untuk siswa bernama {nama} tingkat {jenjang_kelas} belajar {mapel}.
-                Analisis foto halaman buku ini dengan cermat dan berikan output dalam 3 bagian terpisah dengan judul persis seperti ini:
+                Kamu adalah guru les privat profesional yang ramah. Siswa yang sedang belajar bernama {nama} dari tingkat {jenjang_kelas}, mata pelajaran {mapel}.
+                Analisis foto halaman buku ini dengan cermat. Sesuaikan penjelasan materi agar pas dan mudah dicerna oleh anak tingkat {jenjang_kelas}.
+                Berikan output dalam 3 bagian terpisah dengan judul persis seperti ini:
 
                 ===RINGKASAN_MATERI===
-                (Tulis penjelasan rangkuman materi yang mendalam, edukatif, dan mudah dipahami dengan gaya bahasa {gaya})
+                (Tulis penjelasan rangkuman materi yang mendalam, edukatif, dan mudah dipahami dengan gaya bahasa {gaya} menyapa {nama})
 
                 ===KUIS_INTERAKTIF===
-                (Berikan soal kuis latihan interaktif atau tantangan seru beserta opsi atau instruksi pengerjaannya untuk siswa)
+                (Berikan 1-2 soal kuis latihan seru beserta opsi/petunjuk pengerjaannya untuk {nama})
 
                 ===NASKAH_VIDEO===
-                Scene 1: (Teks narasi suara guru untuk pengantar konsep dasar)
-                Scene 2: (Teks narasi suara guru untuk penjelasan inti materi)
-                Scene 3: (Teks narasi suara guru untuk contoh penerapan atau analogi)
-                Scene 4: (Teks narasi suara guru untuk kuis penutup dan penyemangat)
+                Scene 1: (Teks narasi suara guru untuk menyapa {nama} dan pengantar konsep dasar)
+                Scene 2: (Teks narasi suara guru untuk penjelasan inti materi secara runtut)
+                Scene 3: (Teks narasi suara guru untuk contoh penyelesaian atau analogi)
+                Scene 4: (Teks narasi suara guru untuk kuis penutup dan kata penyemangat untuk {nama})
                 """
                 
-                # Memanggil Model Gemini 3.6 Flash (Stabil & Cepat)
+                # Memanggil Gemini 3.6 Flash
                 response = client.models.generate_content(
                     model='gemini-3.6-flash',
                     contents=[prompt, image]
@@ -150,7 +152,7 @@ if submit_button:
                         kuis_part = remaining.strip()
                 else:
                     materi_part = full_text
-                    kuis_part = "Ayo kerjakan latihan soal pada halaman buku di atas!"
+                    kuis_part = "Ayo kerjakan latihan soal pada buku di atas!"
                     naskah_part = full_text
 
                 st.markdown("---")
@@ -158,7 +160,7 @@ if submit_button:
                 st.markdown(materi_part)
                 
                 st.markdown("---")
-                st.markdown(f"## 🏆 Kuis Interaktif untuk {nama}!")
+                st.markdown(f"## 🏆 Kuis Tantangan untuk {nama}!")
                 st.markdown(kuis_part)
                 
                 scene_matches = re.findall(r'Scene\s*\d+\s*:\s*(.*?)(?=(?:Scene\s*\d+\s*:)|$)', naskah_part, re.DOTALL | re.IGNORECASE)
@@ -171,7 +173,7 @@ if submit_button:
                 
                 combined_narration = " ".join(scene_texts)
                 
-                # Render Suara Narator
+                # Render Suara Guru (Voiceover)
                 file_suara = "suara_materi.mp3"
                 asyncio.run(buat_suara_realistis(combined_narration, file_suara))
                 
@@ -179,7 +181,7 @@ if submit_button:
                 total_duration = audio_clip.duration
                 durasi_per_scene = total_duration / len(scene_texts)
                 
-                # Render Video Animasi Berjalan di Backend
+                # Render Video Animasi
                 video_clips = []
                 for i, text_scene in enumerate(scene_texts):
                     frame_path = buat_frame_animasi(
@@ -190,7 +192,6 @@ if submit_button:
                         f"scene_{i+1}.jpg"
                     )
                     slide_clip = ImageClip(frame_path).set_duration(durasi_per_scene)
-                    # Efek animasi zoom perlahan agar dinamis
                     animated_clip = slide_clip.resize(lambda t: 1.0 + 0.02 * (t / durasi_per_scene))
                     video_clips.append(animated_clip)
                 
@@ -201,7 +202,7 @@ if submit_button:
                 final_video.write_videofile(file_video, fps=24, codec="libx264", audio_codec="aac", logger=None)
                 
                 st.markdown("---")
-                st.markdown("## 🎬 Video Animasi Pembelajaran:")
+                st.markdown(f"## 🎬 Video Pembelajaran Khusus untuk {nama}:")
                 st.video(file_video)
                 
             except Exception as e:
