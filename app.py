@@ -2,7 +2,7 @@ import streamlit as st
 import google.generativeai as genai
 from PIL import Image, ImageDraw
 
-# --- PENAMBAL KOMPATIBILITAS PIL/PILLOW TERBARU ---
+# Penambal kompatibilitas Pillow terbaru
 if not hasattr(Image, 'ANTIALIAS'):
     Image.ANTIALIAS = Image.Resampling.LANCZOS
 
@@ -25,56 +25,37 @@ except Exception:
 genai.configure(api_key=GEMINI_API_KEY)
 model = genai.GenerativeModel('gemini-3.5-flash-lite')
 
-# --- FUNGSI PEMBUAT SLIDE ILUSTRASI & DOODLE OTOMATIS ---
-def buat_slide_storyboard(judul, visual_desc, teks_narasi, nomor_scene, total_scene, nama_file):
+# --- FUNGSI PEMBUAT SLIDE VISUAL ELEGAN ---
+def buat_slide_elegan(judul, teks_scene, nomor_scene, total_scene, nama_file):
     img = Image.new('RGB', (1280, 720), color=(245, 247, 250))
     d = ImageDraw.Draw(img)
     
-    # Header Kartu Animasi
+    # Header Kartu
     d.rectangle([50, 40, 1230, 130], fill=(41, 128, 185))
-    d.text((80, 75), f"🎨 {judul} — Adegan {nomor_scene} dari {total_scene}", fill=(255, 255, 255))
+    d.text((80, 75), f"🎓 {judul} — Adegan {nomor_scene} dari {total_scene}", fill=(255, 255, 255))
     
-    # Kotak Panel Ilustrasi / Konsep Doodle AI
-    d.rectangle([50, 150, 1230, 320], fill=(235, 247, 248), outline=(52, 152, 219), width=2)
-    d.text((80, 170), "💡 Konsep Ilustrasi / Animasi Doodle:", fill=(41, 128, 185))
+    # Kotak Konten Slide
+    d.rectangle([50, 150, 1230, 600], fill=(255, 255, 255), outline=(189, 195, 199), width=2)
+    d.text((80, 180), "💡 Penjelasan Materi:", fill=(41, 128, 185))
     
-    vis_words = visual_desc.split()
-    vis_lines, current_v_line = [], ""
-    for w in vis_words:
-        if len(current_v_line + " " + w) < 75:
-            current_v_line += " " + w if current_v_line else w
+    words = teks_scene.split()
+    lines, current_line = [], ""
+    for w in words:
+        if len(current_line + " " + w) < 70:
+            current_line += " " + w if current_line else w
         else:
-            vis_lines.append(current_v_line)
-            current_v_line = w
-    vis_lines.append(current_v_line)
+            lines.append(current_line)
+            current_line = w
+    lines.append(current_line)
     
-    y_v = 210
-    for line in vis_lines[:3]:
-        d.text((80, y_v), line, fill=(44, 62, 80))
-        y_v += 32
-
-    # Kotak Panel Naskah Narasi
-    d.rectangle([50, 340, 1230, 610], fill=(255, 255, 255), outline=(189, 195, 199), width=2)
-    d.text((80, 360), "🎙️ Naskah Narasi Suara Guru:", fill=(39, 174, 96))
-    
-    nar_words = teks_narasi.split()
-    nar_lines, current_n_line = [], ""
-    for w in nar_words:
-        if len(current_n_line + " " + w) < 75:
-            current_n_line += " " + w if current_n_line else w
-        else:
-            nar_lines.append(current_n_line)
-            current_n_line = w
-    nar_lines.append(current_n_line)
-    
-    y_n = 405
-    for line in nar_lines[:6]:
-        d.text((80, y_n), line, fill=(44, 62, 80))
-        y_n += 32
+    y_text = 230
+    for line in lines[:10]:
+        d.text((80, y_text), line, fill=(44, 62, 80))
+        y_text += 38
         
     # Footer
-    d.rectangle([50, 620, 1230, 670], fill=(236, 240, 241))
-    d.text((80, 636), "✨ Tutor Pintar AI — Terjemahan Otomatis Materi ke Video Animasi", fill=(127, 140, 141))
+    d.rectangle([50, 610, 1230, 670], fill=(236, 240, 241))
+    d.text((80, 630), "✨ Tutor Pintar AI — Belajar Interaktif & Menyenangkan", fill=(127, 140, 141))
     
     img.save(nama_file)
     return nama_file
@@ -85,10 +66,10 @@ async def buat_suara_realistis(teks, nama_file):
     await communicate.save(nama_file)
 
 # --- ANTARMUKA APLIKASI ---
-st.set_page_config(page_title="Tutor Pintar Profesional", page_icon="🎓", layout="centered")
+st.set_page_config(page_title="Tutor Pintar AI", page_icon="🎓", layout="centered")
 
-st.title("🎓 Tutor Pintar AI - Otomasi Storyboard ke Video Animasi")
-st.write("Unggah foto buku, AI akan membaca materi, membuat skrip animasi doodle, dan merender videonya secara otomatis!")
+st.title("🎓 Tutor Pintar AI - Belajar Interaktif")
+st.write("Unggah foto halaman buku, dan AI akan menyajikan rangkuman materi, kuis interaktif, serta video animasi pembelajarannya secara otomatis!")
 
 with st.form("user_form"):
     nama = st.text_input("Nama Siswa:", "Rigil Atriani")
@@ -99,7 +80,7 @@ with st.form("user_form"):
     ], index=2)
     mapel = st.text_input("Mata Pelajaran:", "Matematika")
     uploaded_file = st.file_uploader("Foto Halaman Buku Pelajaran:", type=["jpg", "jpeg", "png"])
-    submit_button = st.form_submit_button(label="Ubah Buku Jadi Video Animasi! 🎬")
+    submit_button = st.form_submit_button(label="Mulai Belajar & Buat Video! 🎬")
 
 # --- PROSES UTAMA ---
 if submit_button:
@@ -110,9 +91,9 @@ if submit_button:
         with col1:
             st.image(image, caption="Buku Pelajaran Asli", use_container_width=True)
         with col2:
-            st.info(f"✨ **Halo {nama}!**\nAI sedang menganalisis materi dan menyusun storyboard animasi doodle untuk {mapel}.")
+            st.info(f"✨ **Halo {nama}!**\nTutor sedang memproses materi {mapel} menjadi rangkuman, kuis, dan video animasi.")
         
-        with st.spinner("Menganalisis materi, merancang skrip animasi, merekam suara, dan merender video..."):
+        with st.spinner("Menganalisis materi, menyusun rangkuman, kuis, dan merender video animasi..."):
             try:
                 if "SD" in jenjang_kelas:
                     gaya = "ramah, ceria, menggunakan analogi sehari-hari yang seru untuk anak-anak."
@@ -121,67 +102,86 @@ if submit_button:
                 else:
                     gaya = "profesional, logis, terstruktur, dan akademis."
 
+                # Master Prompt Terstruktur di Backend
                 prompt = f"""
-                Kamu adalah AI Education Director dan Master Storyboarder untuk siswa bernama {nama} tingkat {jenjang_kelas} belajar {mapel}.
-                1. Analisis materi di foto halaman buku tersebut secara mendalam.
-                2. Pecah materi menjadi 4 sampai 5 adegan (scene) berurutan untuk video animasi doodle/ilustrasi interaktif.
-                3. Gunakan gaya bahasa narasi yang {gaya}
-                4. Format wajib untuk setiap adegan harus persis seperti ini:
-                [VISUAL]: (Deskripsi ilustrasi visual doodle atau animasi 2D ceria yang relevan dengan materi)
-                [NARASI]: (Teks kalimat penjelasan suara guru yang natural dan mendalam)
-                ---SCENE---
-                (Ulangi format di atas untuk setiap adegan berikutnya)
+                Kamu adalah guru les privat profesional untuk siswa bernama {nama} tingkat {jenjang_kelas} belajar {mapel}.
+                Analisis foto halaman buku ini dengan cermat dan berikan output dalam 3 bagian terpisah dengan judul persis seperti ini:
+
+                ===RINGKASAN_MATERI===
+                (Tulis penjelasan rangkuman materi yang mendalam, edukatif, dan mudah dipahami dengan gaya bahasa {gaya})
+
+                ===KUIS_INTERAKTIF===
+                (Berikan soal kuis latihan interaktif atau tantangan seru beserta opsi atau instruksi pengerjaannya untuk siswa)
+
+                ===NASKAH_VIDEO===
+                Scene 1: (Teks narasi suara guru untuk pengantar konsep dasar)
+                Scene 2: (Teks narasi suara guru untuk penjelasan inti materi)
+                Scene 3: (Teks narasi suara guru untuk contoh penerapan atau analogi)
+                Scene 4: (Teks narasi suara guru untuk kuis penutup dan penyemangat)
                 """
                 
                 response = model.generate_content([prompt, image])
-                teks_jawaban = response.text
+                full_text = response.text
                 
+                # Parsing bagian respons AI agar bersih dari prompt mentah
+                materi_part = ""
+                kuis_part = ""
+                naskah_part = ""
+                
+                if "===RINGKASAN_MATERI===" in full_text and "===KUIS_INTERAKTIF===" in full_text:
+                    parts = full_text.split("===KUIS_INTERAKTIF===")
+                    materi_part = parts[0].replace("===RINGKASAN_MATERI===", "").strip()
+                    remaining = parts[1]
+                    if "===NASKAH_VIDEO===" in remaining:
+                        subparts = remaining.split("===NASKAH_VIDEO===")
+                        kuis_part = subparts[0].strip()
+                        naskah_part = subparts[1].strip()
+                    else:
+                        kuis_part = remaining.strip()
+                else:
+                    materi_part = full_text
+                    kuis_part = "Ayo kerjakan latihan soal pada halaman buku di atas!"
+                    naskah_part = full_text
+
+                # 1. Tampilkan Rangkuman Materi Pelajaran di UI secara bersih
                 st.markdown("---")
-                st.markdown(f"### 📜 Storyboard & Naskah Animasi ({mapel})")
-                st.markdown(teks_jawaban)
+                st.markdown(f"## 📚 Rangkuman Materi ({mapel})")
+                st.markdown(materi_part)
                 
-                raw_scenes = [s.strip() for s in teks_jawaban.split('---SCENE---') if s.strip()]
-                if not raw_scenes:
-                    raw_scenes = [teks_jawaban]
+                # 2. Tampilkan Kuis Interaktif di UI secara bersih
+                st.markdown("---")
+                st.markdown(f"## 🏆 Kuis Interaktif untuk {nama}!")
+                st.markdown(kuis_part)
                 
-                scene_data = []
-                full_narration_list = []
+                # Ekstrak scene dari naskah video untuk backend rendering
+                scene_matches = re.findall(r'Scene\s*\d+\s*:\s*(.*?)(?=(?:Scene\s*\d+\s*:)|$)', naskah_part, re.DOTALL | re.IGNORECASE)
+                if not scene_matches:
+                    scene_matches = [s.strip() for s in naskah_part.split('\n') if s.strip()]
                 
-                for s in raw_scenes:
-                    vis_match = re.search(r'\[VISUAL\]:(.*?)(?=\[NARASI\]|$)', s, re.DOTALL)
-                    nar_match = re.search(r'\[NARASI\]:(.*)', s, re.DOTALL)
-                    
-                    visual_desc = vis_match.group(1).strip() if vis_match else "Ilustrasi konsep materi pelajaran yang edukatif."
-                    narration_text = nar_match.group(1).strip() if nar_match else s
-                    
-                    clean_narration = re.sub(r'[*#_`>-]', '', narration_text)
-                    full_narration_list.append(clean_narration)
-                    
-                    scene_data.append({
-                        "visual": re.sub(r'[*#_`>-]', '', visual_desc),
-                        "narration": clean_narration
-                    })
+                scene_texts = [re.sub(r'[*#_`>-]', '', s).strip() for s in scene_matches if s.strip()]
+                if not scene_texts:
+                    scene_texts = [re.sub(r'[*#_`>-]', '', materi_part)]
                 
-                combined_audio_script = " ".join(full_narration_list)
+                combined_narration = " ".join(scene_texts)
                 
+                # Render Audio Narasi di Backend
                 file_suara = "suara_materi.mp3"
-                asyncio.run(buat_suara_realistis(combined_audio_script, file_suara))
+                asyncio.run(buat_suara_realistis(combined_narration, file_suara))
                 
                 audio_clip = AudioFileClip(file_suara)
                 total_duration = audio_clip.duration
-                durasi_per_scene = total_duration / len(scene_data)
+                durasi_per_scene = total_duration / len(scene_texts)
                 
+                # Render Video Animasi di Backend
                 video_clips = []
-                for i, scene in enumerate(scene_data):
-                    slide_path = buat_slide_storyboard(
+                for i, text_scene in enumerate(scene_texts):
+                    slide_path = buat_slide_elegan(
                         f"Materi {mapel} ({jenjang_kelas})", 
-                        scene["visual"], 
-                        scene["narration"], 
+                        text_scene, 
                         i+1, 
-                        len(scene_data), 
+                        len(scene_texts), 
                         f"scene_{i+1}.jpg"
                     )
-                    
                     slide_clip = ImageClip(slide_path).set_duration(durasi_per_scene)
                     animated_clip = slide_clip.resize(lambda t: 1.0 + 0.03 * (t / durasi_per_scene))
                     video_clips.append(animated_clip)
@@ -192,11 +192,12 @@ if submit_button:
                 file_video = "video_presentasi.mp4"
                 final_video.write_videofile(file_video, fps=24, codec="libx264", audio_codec="aac", logger=None)
                 
+                # 3. Tampilkan Pemutar Video Animasi di UI
                 st.markdown("---")
-                st.markdown("### 🎬 Pemutar Video Animasi Doodle & Storyboard:")
+                st.markdown("## 🎬 Video Animasi Pembelajaran:")
                 st.video(file_video)
                 
             except Exception as e:
-                st.error(f"Terjadi kendala saat merender video: {e}")
+                st.error(f"Terjadi kendala saat memproses materi atau merender video: {e}")
     else:
         st.warning("Jangan lupa unggah foto halaman bukunya dulu ya!")
