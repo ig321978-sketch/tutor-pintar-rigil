@@ -1,40 +1,83 @@
 import streamlit as st
-import time
 import asyncio
 import re
 import os
-from PIL import Image
+from PIL import Image, ImageDraw
 
-# Gunakan library google-genai terbaru untuk akses Video Generation (Veo)
+if not hasattr(Image, 'ANTIALIAS'):
+    Image.ANTIALIAS = Image.Resampling.LANCZOS
+
 from google import genai
-from google.genai import types
-
 import edge_tts
-from moviepy.editor import VideoFileClip, AudioFileClip
-import moviepy.video.fx.all as vfx
+from moviepy.editor import ImageClip, AudioFileClip, concatenate_videoclips
 import imageio_ffmpeg
 import moviepy.config as mp_config
 
 mp_config.ffmpeg_binary = imageio_ffmpeg.get_ffmpeg_exe()
 
-# --- KONFIGURASI KUNCI API ---
 try:
     API_KEY = st.secrets["GEMINI_API_KEY"]
 except Exception:
     API_KEY = "MASUKKAN_API_KEY_ANDA_DI_SINI"
 
-# Inisialisasi klien SDK baru Google GenAI
 client = genai.Client(api_key=API_KEY)
 
-# --- FUNGSI SUARA NARATOR ---
+# --- FUNGSI ANIMASI GRAFIS DINAMIS (BEBAS KUOTA API VIDEO) ---
+def buat_frame_animasi(judul, teks_scene, nomor_scene, total_scene, nama_file):
+    img = Image.new('RGB', (1280, 720), color=(240, 244, 248))
+    d = ImageDraw.Draw(img)
+    
+    # Header Atas
+    d.rectangle([0, 0, 1280, 110], fill=(41, 128, 185))
+    d.text((50, 40), f"🎓 {judul} — Adegan {nomor_scene} dari {total_scene}", fill=(255, 255, 255))
+    
+    # Panel Visual Animasi Konsep (Kotak Simulasi Objek Belajar)
+    d.rectangle([60, 140, 600, 580], fill=(255, 255, 255), outline=(52, 152, 219), width=4)
+    d.text((90, 170), "📊 Ilustrasi & Blok Konsep Animasi:", fill=(41, 128, 185))
+    
+    # Render kotak-kotak visual bergerak/simulasi objek matematika
+    start_x, start_y = 110, 240
+    for row in range(2):
+        for col in range(4):
+            bx = start_x + (col * 110)
+            by = start_y + (row * 110)
+            d.rectangle([bx, by, bx + 90, by + 90], fill=(235, 247, 248), outline=(41, 128, 185), width=2)
+            d.text((bx + 35, bx + 35), f"⭐", fill=(230, 126, 34))
+
+    # Panel Penjelasan Teks Kanan
+    d.rectangle([630, 140, 1220, 580], fill=(255, 255, 255), outline=(189, 195, 199), width=3)
+    d.text((660, 170), "💡 Penjelasan Langkah:", fill=(39, 174, 96))
+    
+    words = teks_scene.split()
+    lines, current_line = [], ""
+    for w in words:
+        if len(current_line + " " + w) < 38:
+            current_line += " " + w if current_line else w
+        else:
+            lines.append(current_line)
+            current_line = w
+    lines.append(current_line)
+    
+    y_text = 230
+    for line in lines[:8]:
+        d.text((660, y_text), line, fill=(44, 62, 80))
+        y_text += 40
+        
+    # Footer Bawah
+    d.rectangle([0, 630, 1280, 720], fill=(236, 240, 241))
+    d.text((50, 660), "✨ Tutor Pintar AI — Video Animasi Ilustrasi Interaktif", fill=(127, 140, 141))
+    
+    img.save(nama_file)
+    return nama_file
+
 async def buat_suara_realistis(teks, nama_file):
     communicate = edge_tts.Communicate(teks, "id-ID-GadisNeural")
     await communicate.save(nama_file)
 
-st.set_page_config(page_title="Tutor Pintar AI - Animasi AI", page_icon="🎓", layout="centered")
+st.set_page_config(page_title="Tutor Pintar AI", page_icon="🎓", layout="centered")
 
-st.title("🎓 Tutor Pintar AI - Video Animasi Realistis")
-st.write("Sistem akan menganalisis buku, menulis prompt di balik layar, dan merender video animasi bergerak murni menggunakan model AI Text-to-Video!")
+st.title("🎓 Tutor Pintar AI - Video Animasi Pembelajaran")
+st.write("Unggah foto halaman buku, AI akan menganalisis materi di backend dan merender video animasinya secara instan tanpa batas kuota!")
 
 with st.form("user_form"):
     nama = st.text_input("Nama Siswa:", "Rigil Atriani")
@@ -45,9 +88,8 @@ with st.form("user_form"):
     ], index=2)
     mapel = st.text_input("Mata Pelajaran:", "Matematika")
     uploaded_file = st.file_uploader("Foto Halaman Buku Pelajaran:", type=["jpg", "jpeg", "png"])
-    submit_button = st.form_submit_button(label="Generate Video Animasi AI! 🎬")
+    submit_button = st.form_submit_button(label="Buat Video Animasi Sekarang! 🎬")
 
-# --- PROSES UTAMA BACKEND ---
 if submit_button:
     if uploaded_file is not None:
         image = Image.open(uploaded_file)
@@ -56,104 +98,113 @@ if submit_button:
         with col1:
             st.image(image, caption="Buku Pelajaran Asli", use_container_width=True)
         with col2:
-            st.info(f"✨ **Halo {nama}!** AI sedang menganalisis buku untuk menciptakan dunia animasi dari nol.")
+            st.info(f"✨ **Halo {nama}!** AI sedang menganalisis materi dan menyusun skrip video.")
         
-        # 1. BACA MATERI DAN BUAT PROMPT UNTUK GENERATOR VIDEO
-        with st.spinner("1. Menganalisis buku & menyusun Prompt Video Animasi (Backend)..."):
+        with st.spinner("Menganalisis materi di backend & merender video animasi..."):
             try:
-                # Meminta AI membuatkan "Prompt Video" berbahasa Inggris khusus untuk model video generator
-                master_prompt = f"""
-                Kamu adalah Sutradara Video Edukasi AI.
-                Analisis materi di gambar buku pelajaran ini (untuk siswa {jenjang_kelas} belajar {mapel}).
-                Keluarkan persis 3 bagian berikut:
-                
-                ===RINGKASAN===
-                (Rangkuman materi bahasa Indonesia yang mudah dimengerti)
-                
-                ===NASKAH_SUARA===
-                (Kalimat narasi guru bahasa Indonesia yang ramah, untuk disuarakan oleh AI Voice. Minimal 3 paragraf panjang.)
-                
-                ===PROMPT_VIDEO_AI===
-                (Tulis SATU prompt sangat spesifik dalam BAHASA INGGRIS untuk mesin AI Text-to-Video. 
-                Prompt ini harus mendeskripsikan animasi visual 2D doodle / motion graphics yang sedang menjelaskan materi tersebut. 
-                Contoh: "A high quality 2D educational doodle animation of a colorful math concept, playful and moving graphic blocks, clean white background, smooth motion.")
+                if "SD" in jenjang_kelas:
+                    gaya = "ramah, ceria, menggunakan analogi sehari-hari yang seru untuk anak-anak."
+                elif "SMP" in jenjang_kelas:
+                    gaya = "komunikatif, asik, dan relevan dengan dunia remaja."
+                else:
+                    gaya = "profesional, logis, terstruktur, dan akademis."
+
+                # Prompt Backend Terstruktur
+                prompt = f"""
+                Kamu adalah guru les privat profesional untuk siswa bernama {nama} tingkat {jenjang_kelas} belajar {mapel}.
+                Analisis foto halaman buku ini dengan cermat dan berikan output dalam 3 bagian terpisah dengan judul persis seperti ini:
+
+                ===RINGKASAN_MATERI===
+                (Tulis penjelasan rangkuman materi yang mendalam, edukatif, dan mudah dipahami dengan gaya bahasa {gaya})
+
+                ===KUIS_INTERAKTIF===
+                (Berikan soal kuis latihan interaktif atau tantangan seru beserta opsi atau instruksi pengerjaannya untuk siswa)
+
+                ===NASKAH_VIDEO===
+                Scene 1: (Teks narasi suara guru untuk pengantar konsep dasar)
+                Scene 2: (Teks narasi suara guru untuk penjelasan inti materi)
+                Scene 3: (Teks narasi suara guru untuk contoh penerapan atau analogi)
+                Scene 4: (Teks narasi suara guru untuk kuis penutup dan penyemangat)
                 """
                 
-                # Memanggil Model Teks (Gemini 2.5)
+                # Memanggil Model Gemini 3.6 Flash (Stabil & Cepat)
                 response = client.models.generate_content(
-                    model='gemini-3.5-flash-lite',
-                    contents=[master_prompt, image]
+                    model='gemini-3.6-flash',
+                    contents=[prompt, image]
                 )
                 full_text = response.text
                 
-                # Mengekstrak output backend
-                ringkasan = full_text.split("===RINGKASAN===")[1].split("===NASKAH_SUARA===")[0].strip() if "===RINGKASAN===" in full_text else "Materi siap."
-                naskah = full_text.split("===NASKAH_SUARA===")[1].split("===PROMPT_VIDEO_AI===")[0].strip() if "===NASKAH_SUARA===" in full_text else "Selamat belajar!"
-                video_prompt_en = full_text.split("===PROMPT_VIDEO_AI===")[1].strip() if "===PROMPT_VIDEO_AI===" in full_text else "2D educational animation doodle, high quality."
+                materi_part = ""
+                kuis_part = ""
+                naskah_part = ""
+                
+                if "===RINGKASAN_MATERI===" in full_text and "===KUIS_INTERAKTIF===" in full_text:
+                    parts = full_text.split("===KUIS_INTERAKTIF===")
+                    materi_part = parts[0].replace("===RINGKASAN_MATERI===", "").strip()
+                    remaining = parts[1]
+                    if "===NASKAH_VIDEO===" in remaining:
+                        subparts = remaining.split("===NASKAH_VIDEO===")
+                        kuis_part = subparts[0].strip()
+                        naskah_part = subparts[1].strip()
+                    else:
+                        kuis_part = remaining.strip()
+                else:
+                    materi_part = full_text
+                    kuis_part = "Ayo kerjakan latihan soal pada halaman buku di atas!"
+                    naskah_part = full_text
+
+                st.markdown("---")
+                st.markdown(f"## 📚 Rangkuman Materi ({mapel})")
+                st.markdown(materi_part)
                 
                 st.markdown("---")
-                st.markdown(f"### 📚 Rangkuman Materi")
-                st.markdown(ringkasan)
-
-            except Exception as e:
-                st.error(f"Gagal saat menganalisis buku: {e}")
-                st.stop()
+                st.markdown(f"## 🏆 Kuis Interaktif untuk {nama}!")
+                st.markdown(kuis_part)
                 
-        # 2. GENERATE VIDEO MENGGUNAKAN AI GOOGLE VEO
-        with st.spinner(f"2. Mesin AI Text-to-Video (Veo 3.1) sedang merender gambar bergerak dari prompt... (Bisa memakan waktu 1-3 menit)"):
-            try:
-                # Mengirimkan prompt bahasa Inggris tersebut ke Mesin Pembuat Video
-                operation = client.models.generate_videos(
-                    model="veo-3.1-fast-generate-preview",
-                    prompt=video_prompt_en,
-                    config=types.GenerateVideosConfig(
-                        resolution="720p"
+                scene_matches = re.findall(r'Scene\s*\d+\s*:\s*(.*?)(?=(?:Scene\s*\d+\s*:)|$)', naskah_part, re.DOTALL | re.IGNORECASE)
+                if not scene_matches:
+                    scene_matches = [s.strip() for s in naskah_part.split('\n') if s.strip()]
+                
+                scene_texts = [re.sub(r'[*#_`>-]', '', s).strip() for s in scene_matches if s.strip()]
+                if not scene_texts:
+                    scene_texts = [re.sub(r'[*#_`>-]', '', materi_part)]
+                
+                combined_narration = " ".join(scene_texts)
+                
+                # Render Suara Narator
+                file_suara = "suara_materi.mp3"
+                asyncio.run(buat_suara_realistis(combined_narration, file_suara))
+                
+                audio_clip = AudioFileClip(file_suara)
+                total_duration = audio_clip.duration
+                durasi_per_scene = total_duration / len(scene_texts)
+                
+                # Render Video Animasi Berjalan di Backend
+                video_clips = []
+                for i, text_scene in enumerate(scene_texts):
+                    frame_path = buat_frame_animasi(
+                        f"Materi {mapel} ({jenjang_kelas})", 
+                        text_scene, 
+                        i+1, 
+                        len(scene_texts), 
+                        f"scene_{i+1}.jpg"
                     )
-                )
+                    slide_clip = ImageClip(frame_path).set_duration(durasi_per_scene)
+                    # Efek animasi zoom perlahan agar dinamis
+                    animated_clip = slide_clip.resize(lambda t: 1.0 + 0.02 * (t / durasi_per_scene))
+                    video_clips.append(animated_clip)
                 
-                # Menunggu video selesai dirender oleh cloud
-                while not operation.done:
-                    time.sleep(5)
-                    operation = client.operations.get(operation)
+                final_visual_clip = concatenate_videoclips(video_clips)
+                final_video = final_visual_clip.set_audio(audio_clip)
                 
-                # Mengunduh dan menyimpan video mentah tanpa suara
-                vid_result = operation.result.generated_videos[0]
-                temp_video_path = "video_tanpa_suara.mp4"
-                client.files.download(file=vid_result.video)
-                vid_result.video.save(temp_video_path)
-                
-            except Exception as e:
-                st.error(f"Terjadi kendala pada Video Generator AI: {e}")
-                st.stop()
-
-        # 3. GENERATE SUARA DAN GABUNGKAN
-        with st.spinner("3. Menyinkronkan Suara Guru dengan Video Animasi..."):
-            try:
-                bersih_naskah = re.sub(r'[*#_`>-]', '', naskah)
-                file_suara = "suara_narator.mp3"
-                asyncio.run(buat_suara_realistis(bersih_naskah, file_suara))
-                
-                # Membuka Video Mentah dan Suara Narasi
-                ai_video_clip = VideoFileClip(temp_video_path)
-                ai_audio_clip = AudioFileClip(file_suara)
-                
-                # Karena durasi video AI biasanya pendek (sekitar 4-8 detik), 
-                # kita melambatkan videonya atau meloopingnya agar sesuai dengan panjang durasi narasi suara guru
-                if ai_video_clip.duration < ai_audio_clip.duration:
-                    faktor_perlambat = ai_video_clip.duration / ai_audio_clip.duration
-                    ai_video_clip = ai_video_clip.fx(vfx.speedx, faktor_perlambat)
-                
-                # Menyatukan audio ke dalam video
-                final_video = ai_video_clip.set_audio(ai_audio_clip)
-                file_video_final = "hasil_animasi_ai_veo.mp4"
-                final_video.write_videofile(file_video_final, fps=24, codec="libx264", audio_codec="aac", logger=None)
+                file_video = "video_presentasi.mp4"
+                final_video.write_videofile(file_video, fps=24, codec="libx264", audio_codec="aac", logger=None)
                 
                 st.markdown("---")
-                st.markdown("### 🎬 Video Animasi AI Anda Sudah Jadi!")
-                st.video(file_video_final)
+                st.markdown("## 🎬 Video Animasi Pembelajaran:")
+                st.video(file_video)
                 
             except Exception as e:
-                st.error(f"Gagal saat menggabungkan suara dan video: {e}")
-                
+                st.error(f"Terjadi kendala saat memproses materi atau merender video: {e}")
     else:
-        st.warning("Silakan unggah foto bukunya dulu.")
+        st.warning("Jangan lupa unggah foto halaman bukunya dulu ya!")
