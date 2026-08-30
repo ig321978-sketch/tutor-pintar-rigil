@@ -49,7 +49,7 @@ if 'daftar_kuis' not in st.session_state:
 st.set_page_config(page_title="Tutor Pintar Rigil", page_icon="🎓", layout="centered")
 
 st.title("🎓 Tutor Pintar Rigil")
-st.write("Belajar asik dengan asisten suara AI yang 100% natural, membaca teks kata demi kata!")
+st.write("Belajar asik dengan asisten suara AI yang 100% natural, membaca materi secara tuntas!")
 
 # --- FORMULIR UNGGAH BUKU ---
 with st.form("user_form"):
@@ -70,31 +70,35 @@ if btn_analisis:
         image = Image.open(uploaded_file)
         st.image(image, caption="Buku Pelajaran Asli", use_container_width=True)
         
+        # Menghapus memori kuis lama setiap kali mengunggah materi baru
+        for key in list(st.session_state.keys()):
+            if key.startswith('status_soal_'):
+                del st.session_state[key]
+        
         with st.spinner("AI sedang menyiapkan penjelasan detail dan merekam suara..."):
             
-            # Pengaturan karakter suara (SD menggunakan "nova" yang natural, hangat dan keibuan/kebapakan)
+            # Pengaturan karakter suara 
             if "SD" in jenjang_kelas:
-                karakter_suara = "nova" 
+                karakter_suara = "nova" # Natural, sabar, seperti guru pendamping anak
             elif "SMP" in jenjang_kelas:
-                karakter_suara = "echo" 
+                karakter_suara = "echo" # Santai, sedikit maskulin
             else:
-                karakter_suara = "alloy"
+                karakter_suara = "alloy" # Profesional dan berwibawa
 
             maksimal_coba = 3
             for percobaan in range(maksimal_coba):
                 try:
-                    # PROMPT DIPERBARUI: Naskah Visual = Naskah Suara (100% Sama) & Sangat Detail
+                    # PROMPT DIPERBARUI: Memecah Naskah Layar (Angka) dan Naskah Suara (Ejaan Huruf)
                     ux_bridge_prompt = f"""
                     Kamu adalah Tutor AI ahli {mapel} yang super sabar. Baca materi dari foto ini untuk siswa {jenjang_kelas} bernama {nama}.
-                    Keluarkan persis 2 bagian berikut dengan format pembatas yang ketat:
+                    Keluarkan persis 3 bagian berikut dengan format pembatas yang ketat:
 
-                    ===NASKAH_PENJELASAN===
-                    (Tuliskan SATU naskah utuh yang akan dibaca oleh anak di layar SEKALIGUS dibacakan oleh suara AI. 
-                    Syarat Mutlak Naskah:
-                    1. Sapa {nama} dengan hangat dan natural.
-                    2. Jelaskan materi dengan SANGAT DETAIL. Jika di buku ada "Cara 1", "Cara 2", dst., JELASKAN SEMUANYA satu per satu beserta CONTOH ANGKA dan urutan perhitungannya. JANGAN ada yang dilewatkan.
-                    3. Karena teks ini juga akan dibaca oleh robot suara, EJA DENGAN KATA-KATA untuk setiap angka atau simbol matematika (contoh: tulis "dua puluh satu dikali empat" BUKAN "21 x 4").
-                    4. Gunakan gaya bahasa lisan yang ramah, jelas, dan paragraf yang rapi.)
+                    ===NASKAH_LAYAR===
+                    (Tulis penjelasan materi SANGAT DETAIL. Jika ada "Cara 1", "Cara 2", jelaskan SEMUANYA beserta contoh perhitungan angkanya secara urut. 
+                    FORMAT: Profesional layaknya materi pelajaran. Gunakan angka asli dan simbol matematika (misal: 35 x 2 = 70). Jangan dieja dengan huruf. Sapa {nama} di awal kalimat.)
+
+                    ===NASKAH_SUARA===
+                    (Tulis versi lisan dari NASKAH_LAYAR di atas. Kalimatnya HARUS 100% sama dan sinkron dengan naskah layar, TETAPI semua angka dan simbol matematika WAJIB DIEJA dengan huruf (misal: "tiga puluh lima dikali dua sama dengan tujuh puluh"). Ini agar mesin suara dapat membacanya dengan tepat dan tidak tersendat.)
 
                     ===KUIS===
                     (Buatlah 3 soal pilihan ganda dari materi. Wajib gunakan format ini per baris, dipisah dengan 3 garis lurus HANYA:)
@@ -110,18 +114,21 @@ if btn_analisis:
                     )
                     full_text = response.text
                     
-                    # Memecah dan Memproses Teks
-                    if "===NASKAH_PENJELASAN===" in full_text:
-                        match_n = re.search(r'===NASKAH_PENJELASAN===(.*?)(?====KUIS===|$)', full_text, re.DOTALL)
-                        if match_n: 
-                            naskah_mentah = match_n.group(1).strip()
-                            st.session_state.naskah_layar = naskah_mentah
-                            
-                            # Membersihkan sedikit simbol markdown (*, #) agar suara TTS tidak tersendat, 
-                            # tapi struktur teks (kata-kata) tetap 100% persis dengan di layar.
-                            naskah_suara = re.sub(r'[*#_`>-]', '', naskah_mentah)
-                            buat_suara_premium(naskah_suara, st.session_state.file_suara, karakter_suara)
+                    # Parsing Naskah Layar
+                    if "===NASKAH_LAYAR===" in full_text:
+                        match_l = re.search(r'===NASKAH_LAYAR===(.*?)(?====NASKAH_SUARA===|$)', full_text, re.DOTALL)
+                        if match_l: 
+                            st.session_state.naskah_layar = match_l.group(1).strip()
                     
+                    # Parsing Naskah Suara & Generate Audio
+                    if "===NASKAH_SUARA===" in full_text:
+                        match_s = re.search(r'===NASKAH_SUARA===(.*?)(?====KUIS===|$)', full_text, re.DOTALL)
+                        if match_s: 
+                            naskah_suara = match_s.group(1).strip()
+                            naskah_bersih = re.sub(r'[*#_`>-]', '', naskah_suara)
+                            buat_suara_premium(naskah_bersih, st.session_state.file_suara, karakter_suara)
+                    
+                    # Parsing Kuis
                     if "===KUIS===" in full_text:
                         match_k = re.search(r'===KUIS===(.*)', full_text, re.DOTALL)
                         if match_k: 
@@ -155,32 +162,39 @@ if btn_analisis:
 if st.session_state.berhasil_baca:
     st.markdown("---")
     st.markdown("## 🎧 Dengarkan & Baca Penjelasan Guru")
-    st.info("💡 Putar suara di bawah ini, lalu ikuti teksnya. Teks dan suara 100% sama!")
+    st.info("💡 Putar suara di bawah ini, lalu ikuti teksnya. Suara akan membaca teks ini dengan detail!")
     
-    # Audio dan Teks diletakkan berdekatan agar mudah diikuti
     st.audio(st.session_state.file_suara, format="audio/mp3")
     st.markdown(st.session_state.naskah_layar)
     
     st.markdown("---")
     st.markdown(f"## 🏆 Latihan Soal untuk {nama}!")
     
-    # Kuis yang dipisah satu per satu (Tombol Radio kosong tanpa pilihan default)
     if st.session_state.daftar_kuis:
         for i, q in enumerate(st.session_state.daftar_kuis):
             st.markdown(f"**{i+1}. {q['soal']}**")
             
-            # index=None menonaktifkan lingkaran merah bawaan
+            # index=None agar lingkaran merah (radio) kosong saat awal dimuat
             jawaban_user = st.radio("Pilih jawaban:", q['opsi'], key=f"soal_{i}", index=None, label_visibility="collapsed")
             
-            # Tombol cek satuan tanpa checklist
+            # Tombol Cek Jawaban (tanpa checklist)
             if st.button(f"Cek Jawaban Soal {i+1}", key=f"btn_cek_{i}"):
                 if jawaban_user == q['kunci']:
-                    st.success("Tepat sekali! Hebat! ⭐")
+                    st.session_state[f"status_soal_{i}"] = "benar"
                     if i == len(st.session_state.daftar_kuis) - 1:
-                        st.balloons() # Balon keluar jika menjawab soal terakhir dengan benar
+                        st.balloons() # Munculkan balon jika soal terakhir diklik benar
                 elif jawaban_user is None:
-                    st.warning("Kamu belum memilih jawaban, klik salah satu bulatan dulu ya.")
+                    st.session_state[f"status_soal_{i}"] = "kosong"
                 else:
-                    st.error("Wah, masih kurang tepat. Coba hitung pelan-pelan lagi ya!")
+                    st.session_state[f"status_soal_{i}"] = "salah"
+            
+            # Menampilkan hasil evaluasi HANYA jika tombol sudah pernah ditekan, dan tidak akan hilang
+            status_jawaban = st.session_state.get(f"status_soal_{i}")
+            if status_jawaban == "benar":
+                st.success("Tepat sekali! Hebat! ⭐")
+            elif status_jawaban == "kosong":
+                st.warning("Kamu belum memilih jawaban, klik salah satu bulatan dulu ya.")
+            elif status_jawaban == "salah":
+                st.error("Wah, masih kurang tepat. Coba hitung pelan-pelan lagi ya!")
             
             st.write("") # Memberi jarak antar soal
