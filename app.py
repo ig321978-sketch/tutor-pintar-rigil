@@ -3,7 +3,7 @@ import google.generativeai as genai
 from PIL import Image, ImageDraw
 import edge_tts
 import asyncio
-from moviepy import ImageClip, AudioFileClip, concatenate_videoclips
+from moviepy.editor import ImageClip, AudioFileClip, concatenate_videoclips
 import imageio_ffmpeg
 import moviepy.config as mp_config
 import os
@@ -16,7 +16,6 @@ mp_config.ffmpeg_binary = imageio_ffmpeg.get_ffmpeg_exe()
 try:
     GEMINI_API_KEY = st.secrets["GEMINI_API_KEY"]
 except Exception:
-    # Fallback untuk pengujian lokal jika secrets belum diatur
     GEMINI_API_KEY = "MASUKKAN_API_KEY_ANDA_DI_SINI"
 
 genai.configure(api_key=GEMINI_API_KEY)
@@ -120,7 +119,7 @@ if submit_button:
                 audio_clip = AudioFileClip(file_suara)
                 total_duration = audio_clip.duration
                 
-                # PEMOTONGAN CERDAS MENJADI BANYAK ADEGAN (Berdasarkan Kalimat / Tanda Titik)
+                # PEMOTONGAN CERDAS MENJADI BANYAK ADEGAN
                 kalimat_list = [k.strip() for k in re.split(r'(?<=[.!?])\s+', teks_bersih) if k.strip()]
                 
                 scene_list = []
