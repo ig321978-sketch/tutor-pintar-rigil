@@ -1,38 +1,41 @@
 import streamlit as st
 import re
-import requests
-import base64
 from PIL import Image
 from google import genai
+from openai import OpenAI
 
 # --- KONFIGURASI KUNCI API ---
 try:
     API_KEY = st.secrets["GEMINI_API_KEY"]
 except Exception:
-    API_KEY = "MASUKKAN_API_KEY_ANDA_DI_SINI"
+    API_KEY = "MASUKKAN_GEMINI_API_KEY"
 
-client = genai.Client(api_key=API_KEY)
+try:
+    OPENAI_KEY = st.secrets["OPENAI_API_KEY"]
+except Exception:
+    OPENAI_KEY = "MASUKKAN_OPENAI_API_KEY"
 
-# --- FUNGSI PEMBUAT SUARA GOOGLE PREMIUM (NEURAL2) ---
-def buat_suara_google(teks, nama_file, kunci_api):
-    url = "https://texttospeech.googleapis.com/v1/text:synthesize?key=" + kunci_api
-    headers = {"Content-Type": "application/json"}
+# Inisialisasi Otak Gemini (Untuk Membaca Buku)
+client_gemini = genai.Client(api_key=API_KEY)
+
+# Inisialisasi Suara OpenAI (Untuk Berbicara)
+if OPENAI_KEY and OPENAI_KEY != "MASUKKAN_OPENAI_API_KEY":
+    client_openai = OpenAI(api_key=OPENAI_KEY)
+else:
+    client_openai = None
+
+# --- FUNGSI PEMBUAT SUARA MANUSIA PREMIUM (OPENAI) ---
+def buat_suara_premium(teks, nama_file):
+    if not client_openai:
+        raise Exception("API Key OpenAI belum dimasukkan di menu Secrets!")
     
-    # Menggunakan model Neural2-D (Suara wanita premium Indonesia yang sangat natural)
-    data = {
-        "input": {"text": teks},
-        "voice": {"languageCode": "id-ID", "name": "id-ID-Neural2-D"},
-        "audioConfig": {"audioEncoding": "MP3", "speakingRate": 0.95} 
-    }
-    
-    response = requests.post(url, headers=headers, json=data)
-    
-    if response.status_code == 200:
-        audio_content = response.json()["audioContent"]
-        with open(nama_file, "wb") as f:
-            f.write(base64.b64decode(audio_content))
-    else:
-        raise Exception("Gagal membuat suara Google: " + response.text)
+    # Model tts-1 dengan suara "nova" (perempuan ramah)
+    response = client_openai.audio.speech.create(
+        model="tts-1",
+        voice="nova",
+        input=teks
+    )
+    response.stream_to_file(nama_file)
 
 # --- INISIALISASI SESSION STATE ---
 if 'berhasil_baca' not in st.session_state:
@@ -52,7 +55,7 @@ if 'kuis_kunci' not in st.session_state:
 st.set_page_config(page_title="Tutor Pintar Rigil", page_icon="🎓", layout="centered")
 
 st.title("🎓 Tutor Pintar Rigil (Premium AI Voice)")
-st.write("Modul interaktif dengan penjelasan detail bersuara manusia dari Google AI!")
+st.write("Belajar asik dengan asisten suara AI yang 100% natural layaknya manusia!")
 
 # --- FORMULIR UNGGAH BUKU ---
 with st.form("user_form"):
@@ -71,8 +74,6 @@ with st.form("user_form"):
 if btn_analisis:
     if uploaded_file is not None:
         image = Image.open(uploaded_file)
-        
-        # BARIS YANG SUDAH DIPERBAIKI (Menggunakan use_container_width)
         st.image(image, caption="Buku Pelajaran Asli", use_container_width=True)
         
         with st.spinner("AI sedang meracik materi dan merekam suara guru..."):
@@ -86,12 +87,14 @@ if btn_analisis:
                     "Pertanyaan soal?|||Opsi A|||Opsi B|||Opsi C|||A"
                 )
                 
-                response = client.models.generate_content(
+                # Gemini memproses teks
+                response = client_gemini.models.generate_content(
                     model='gemini-3.6-flash',
                     contents=[ux_bridge_prompt, image]
                 )
                 full_text = response.text
                 
+                # Memecah teks
                 if "===RINGKASAN===" in full_text:
                     match_r = re.search(r'===RINGKASAN===(.*?)(?====NASKAH_SUARA===|$)', full_text, re.DOTALL)
                     if match_r: st.session_state.ringkasan = match_r.group(1).strip()
@@ -101,7 +104,9 @@ if btn_analisis:
                     if match_n: 
                         naskah_mentah = match_n.group(1).strip()
                         naskah_bersih = re.sub(r'[*#_`>-]', '', naskah_mentah)
-                        buat_suara_google(naskah_bersih, st.session_state.file_suara, API_KEY)
+                        
+                        # Merekam suara menggunakan OpenAI Premium
+                        buat_suara_premium(naskah_bersih, st.session_state.file_suara)
                 
                 if "===KUIS===" in full_text:
                     match_k = re.search(r'===KUIS===(.*)', full_text, re.DOTALL)
