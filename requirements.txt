@@ -1,6 +1,6 @@
 streamlit
 google-generativeai
-pillow
+pillow<10.0.0
 edge-tts
 moviepy==1.0.3
 imageio-ffmpeg
