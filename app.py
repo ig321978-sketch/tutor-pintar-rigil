@@ -19,7 +19,7 @@ except Exception:
     GEMINI_API_KEY = "MASUKKAN_API_KEY_ANDA_DI_SINI"
 
 genai.configure(api_key=GEMINI_API_KEY)
-model = genai.GenerativeModel('gemini-1.5-flash')
+model = genai.GenerativeModel('gemini-3.5-flash-lite')
 
 # --- FUNGSI PEMBUAT SLIDE VISUAL DINAMIS ---
 def buat_slide_dinamis(judul, teks_cerita, nomor_scene, total_scene, nama_file):
