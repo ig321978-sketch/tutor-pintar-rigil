@@ -1,9 +1,9 @@
 import streamlit as st
-import asyncio
 import re
+import requests
+import base64
 from PIL import Image
 from google import genai
-import edge_tts
 
 # --- KONFIGURASI KUNCI API ---
 try:
@@ -13,66 +13,105 @@ except Exception:
 
 client = genai.Client(api_key=API_KEY)
 
-# --- FUNGSI PEMBUAT SUARA (100% GRATIS) ---
-async def buat_suara(teks, nama_file):
-    communicate = edge_tts.Communicate(teks, "id-ID-GadisNeural")
-    await communicate.save(nama_file)
+# --- FUNGSI PEMBUAT SUARA GOOGLE PREMIUM (NEURAL2) ---
+def buat_suara_google(teks, nama_file, kunci_api):
+    url = "https://texttospeech.googleapis.com/v1/text:synthesize?key=" + kunci_api
+    headers = {"Content-Type": "application/json"}
+    
+    data = {
+        "input": {"text": teks},
+        "voice": {"languageCode": "id-ID", "name": "id-ID-Neural2-D"},
+        "audioConfig": {"audioEncoding": "MP3", "speakingRate": 0.95} 
+    }
+    
+    response = requests.post(url, headers=headers, json=data)
+    
+    if response.status_code == 200:
+        audio_content = response.json()["audioContent"]
+        with open(nama_file, "wb") as f:
+            f.write(base64.b64decode(audio_content))
+    else:
+        raise Exception("Gagal membuat suara Google: " + response.text)
 
-# --- INISIALISASI PENYIMPANAN DATA (SESSION STATE) ---
+# --- INISIALISASI SESSION STATE ---
 if 'berhasil_baca' not in st.session_state:
     st.session_state.berhasil_baca = False
-if 'ringkasan' not in st.session_state:
-    st.session_state.ringkasan = ""
+if 'slide_materi' not in st.session_state:
+    st.session_state.slide_materi = []
 if 'file_suara' not in st.session_state:
     st.session_state.file_suara = "audio_guru.mp3"
-if 'kuis_soal' not in st.session_state:
-    st.session_state.kuis_soal = ""
-if 'kuis_opsi' not in st.session_state:
-    st.session_state.kuis_opsi = []
-if 'kuis_kunci' not in st.session_state:
-    st.session_state.kuis_kunci = ""
+if 'kuis_data' not in st.session_state:
+    st.session_state.kuis_data = []
 
 # --- ANTARMUKA PENGGUNA (UI) UTAMA ---
-st.set_page_config(page_title="Tutor Pintar Rigil", page_icon="🎓", layout="centered")
+st.set_page_config(page_title="Tutor Pintar Rigil", page_icon="🎓", layout="wide")
 
-st.title("🎓 Tutor Pintar Rigil (Modul Interaktif)")
-st.write("Belajar asik, lengkap, dan 100% gratis dengan asisten suara AI!")
+# --- CUSTOM CSS ALA GAMMA APP ---
+st.markdown("""
+<style>
+    .slide-card {
+        background-color: #ffffff;
+        border-radius: 16px;
+        padding: 30px;
+        box-shadow: 0 10px 20px rgba(0,0,0,0.08);
+        margin-bottom: 25px;
+        border-left: 10px solid #FF9800;
+        border-top: 1px solid #f0f0f0;
+        border-right: 1px solid #f0f0f0;
+        border-bottom: 1px solid #f0f0f0;
+    }
+    .slide-title {
+        color: #E65100;
+        font-size: 28px;
+        font-weight: 800;
+        margin-bottom: 15px;
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    }
+    .slide-content {
+        color: #333333;
+        font-size: 18px;
+        line-height: 1.6;
+    }
+</style>
+""", unsafe_allow_html=True)
+
+st.title("🎓 Tutor Pintar Rigil (Interactive Slide Edition)")
+st.write("Modul presentasi cerdas dengan visual ala Gamma, penjelasan audio utuh, dan 10 Tantangan Kuis!")
 
 # --- FORMULIR UNGGAH BUKU ---
 with st.form("user_form"):
-    nama = st.text_input("Nama Siswa:", "Rigil")
-    jenjang_kelas = st.selectbox("Jenjang & Kelas:", [
-        "SD - Kelas 1", "SD - Kelas 2", "SD - Kelas 3", "SD - Kelas 4", "SD - Kelas 5", "SD - Kelas 6",
-        "SMP - Kelas 7", "SMP - Kelas 8", "SMP - Kelas 9",
-        "SMA - Kelas 10", "SMA - Kelas 11", "SMA - Kelas 12"
-    ], index=2)
-    mapel = st.text_input("Mata Pelajaran:", "Matematika")
-    uploaded_file = st.file_uploader("Foto Halaman Buku Pelajaran:", type=["jpg", "jpeg", "png"])
+    col1, col2, col3 = st.columns(3)
+    with col1: nama = st.text_input("Nama Siswa:", "Rigil")
+    with col2: jenjang_kelas = st.selectbox("Jenjang & Kelas:", ["SD - Kelas 1", "SD - Kelas 2", "SD - Kelas 3", "SD - Kelas 4", "SD - Kelas 5", "SD - Kelas 6"], index=2)
+    with col3: mapel = st.text_input("Mata Pelajaran:", "Matematika")
     
-    btn_analisis = st.form_submit_button(label="Mulai Belajar! 🚀")
+    uploaded_file = st.file_uploader("Foto Halaman Buku Pelajaran:", type=["jpg", "jpeg", "png"])
+    btn_analisis = st.form_submit_button(label="Ubah Jadi Presentasi! 🚀")
 
 # --- PROSES ANALISIS AI (OTAK SISTEM) ---
 if btn_analisis:
     if uploaded_file is not None:
         image = Image.open(uploaded_file)
-        st.image(image, caption="Buku Pelajaran Asli", use_container_width=True)
+        st.image(image, caption="Buku Pelajaran Asli", width=400)
         
-        with st.spinner("AI sedang menyiapkan catatan, rekaman suara, dan kuis..."):
+        with st.spinner("AI sedang merancang presentasi visual, menulis naskah, dan menyusun 10 kuis..."):
             try:
-                ux_bridge_prompt = f"""
-                Kamu adalah Tutor AI ahli {mapel} yang sabar. Baca materi dari foto ini untuk siswa {jenjang_kelas} bernama {nama}.
-                Keluarkan persis 3 bagian berikut dengan format pembatas yang ketat:
-
-                ===RINGKASAN===
-                (Tulis catatan visual materi ini. Gunakan format poin, teks tebal, dan emoji yang relevan agar menarik dibaca di layar.)
-
-                ===NASKAH_SUARA===
-                (Tulis naskah yang akan dibacakan TTS. Mengajarlah secara mendetail, pelan, dan sabar layaknya guru privat berbicara langsung kepada {nama}. JANGAN gunakan emoji atau simbol matematika rumit agar mesin pembaca suara tidak tersendat.)
-
-                ===KUIS===
-                (Buat 1 soal pilihan ganda dari materi. Wajib gunakan format ini dipisah dengan 3 garis lurus HANYA:)
-                Pertanyaan soal?|||Opsi A|||Opsi B|||Opsi C|||A
-                """
+                # Instruksi canggih untuk memisahkan Slide Visual, Naskah, dan 10 Kuis
+                ux_bridge_prompt = (
+                    "Kamu adalah Tutor AI ahli " + mapel + " yang kreatif. Baca materi dari foto ini untuk siswa " + jenjang_kelas + " bernama " + nama + ".\n"
+                    "Keluarkan persis 2 bagian berikut:\n\n"
+                    "===PRESENTASI===\n"
+                    "(Buat 3 hingga 5 Slide materi. Pisahkan tiap slide HANYA dengan tag [SLIDE].\n"
+                    "Format tiap slide WAJIB seperti ini:\n"
+                    "[SLIDE]\n"
+                    "Judul: [Tulis Judul Slide Menarik]\n"
+                    "Visual: [Tulis poin-poin materi untuk layar. Gunakan format tebal, daftar poin, dan banyak emoji agar secara visual menyerupai presentasi bergaya modern dan berbobot.]\n"
+                    "Naskah: [Tulis naskah lisan guru yang SANGAT PANJANG, detail, dan sabar untuk dibacakan saat slide ini tampil. Jangan gunakan simbol rumit.])\n\n"
+                    "===KUIS===\n"
+                    "(Buat TEPAT 10 soal pilihan ganda yang bervariasi tingkat kesulitannya. Tiap soal WAJIB di baris baru dengan format pemisah '|||' HANYA seperti ini:)\n"
+                    "Pertanyaan soal pertama?|||Opsi A|||Opsi B|||Opsi C|||Opsi D|||A\n"
+                    "Pertanyaan soal kedua?|||Opsi A|||Opsi B|||Opsi C|||Opsi D|||B"
+                )
                 
                 response = client.models.generate_content(
                     model='gemini-3.6-flash',
@@ -80,60 +119,105 @@ if btn_analisis:
                 )
                 full_text = response.text
                 
-                # Memecah teks cerdas
-                if "===RINGKASAN===" in full_text:
-                    match_r = re.search(r'===RINGKASAN===(.*?)(?====NASKAH_SUARA===|$)', full_text, re.DOTALL)
-                    if match_r: st.session_state.ringkasan = match_r.group(1).strip()
+                # 1. PARSING PRESENTASI (Visual & Naskah)
+                naskah_audio_lengkap = ""
+                st.session_state.slide_materi = []
                 
-                if "===NASKAH_SUARA===" in full_text:
-                    match_n = re.search(r'===NASKAH_SUARA===(.*?)(?====KUIS===|$)', full_text, re.DOTALL)
-                    if match_n: 
-                        naskah_mentah = match_n.group(1).strip()
-                        # Render audio di latar belakang
-                        asyncio.run(buat_suara(naskah_mentah, st.session_state.file_suara))
-                
+                if "===PRESENTASI===" in full_text:
+                    bagian_pres = re.search(r'===PRESENTASI===(.*?)(?====KUIS===|$)', full_text, re.DOTALL)
+                    if bagian_pres:
+                        slides_raw = bagian_pres.group(1).split("[SLIDE]")
+                        for slide in slides_raw:
+                            if len(slide.strip()) > 10:
+                                judul = re.search(r'Judul:(.*?)(?=Visual:|$)', slide, re.DOTALL)
+                                visual = re.search(r'Visual:(.*?)(?=Naskah:|$)', slide, re.DOTALL)
+                                naskah = re.search(r'Naskah:(.*)', slide, re.DOTALL)
+                                
+                                j_teks = judul.group(1).strip() if judul else "Materi"
+                                v_teks = visual.group(1).strip() if visual else "..."
+                                n_teks = naskah.group(1).strip() if naskah else "..."
+                                
+                                st.session_state.slide_materi.append({"judul": j_teks, "visual": v_teks})
+                                naskah_audio_lengkap += " " + n_teks
+
+                # Merekam seluruh naskah ke dalam satu file audio yang mulus
+                if naskah_audio_lengkap:
+                    naskah_bersih = re.sub(r'[*#_`>-]', '', naskah_audio_lengkap)
+                    buat_suara_google(naskah_bersih, st.session_state.file_suara, API_KEY)
+
+                # 2. PARSING KUIS (10 Soal)
+                st.session_state.kuis_data = []
                 if "===KUIS===" in full_text:
-                    match_k = re.search(r'===KUIS===(.*)', full_text, re.DOTALL)
-                    if match_k: 
-                        kuis_raw = match_k.group(1).strip()
-                        parts = kuis_raw.split("|||")
-                        if len(parts) >= 5:
-                            st.session_state.kuis_soal = parts[0].strip()
-                            st.session_state.kuis_opsi = [parts[1].strip(), parts[2].strip(), parts[3].strip()]
-                            st.session_state.kuis_kunci = parts[4].strip()
+                    bagian_kuis = re.search(r'===KUIS===(.*)', full_text, re.DOTALL)
+                    if bagian_kuis:
+                        baris_kuis = bagian_kuis.group(1).strip().split('\n')
+                        for baris in baris_kuis:
+                            parts = baris.split("|||")
+                            if len(parts) >= 6:
+                                st.session_state.kuis_data.append({
+                                    "soal": parts[0].strip(),
+                                    "opsi": [parts[1].strip(), parts[2].strip(), parts[3].strip(), parts[4].strip()],
+                                    "kunci": parts[5].strip()
+                                })
                 
-                # Kunci status agar modul muncul
                 st.session_state.berhasil_baca = True
                 
             except Exception as e:
-                st.error(f"Gagal saat menganalisis materi: {e}")
+                st.error("Terjadi kendala saat meracik presentasi: " + str(e))
     else:
         st.warning("Silakan unggah foto bukunya dulu ya!")
 
-# --- MENAMPILKAN MODUL BELAJAR INTERAKTIF ---
+# --- MENAMPILKAN MODUL PRESENTASI & KUIS ---
 if st.session_state.berhasil_baca:
     st.markdown("---")
-    st.markdown(f"## 📚 Catatan Pintar ({mapel})")
-    st.markdown(st.session_state.ringkasan)
     
-    st.markdown("---")
-    st.markdown("## 🎧 Dengarkan Penjelasan Guru")
-    st.info("💡 Klik tombol Play di bawah ini untuk mendengarkan guru menjelaskan materi secara detail!")
+    # KONTROL AUDIO UTAMA
+    st.markdown("### 🎧 Dengarkan Penjelasan Lengkap")
+    st.info("Tekan tombol **Play** sambil membaca slide presentasi di bawah ini secara perlahan.")
     st.audio(st.session_state.file_suara, format="audio/mp3")
+    st.markdown("<br>", unsafe_allow_html=True)
     
+    # RENDER SLIDE ALA GAMMA
+    for i, slide in enumerate(st.session_state.slide_materi):
+        st.markdown(
+            '<div class="slide-card">'
+            '<div class="slide-title">Slide ' + str(i+1) + ': ' + slide["judul"] + '</div>'
+            '<div class="slide-content">', 
+            unsafe_allow_html=True
+        )
+        # Render markdown native Streamlit di dalam card
+        st.markdown(slide["visual"]) 
+        st.markdown('</div></div>', unsafe_allow_html=True)
+    
+    # RENDER 10 KUIS INTERAKTIF
     st.markdown("---")
-    st.markdown(f"## 🏆 Kuis untuk {nama}!")
+    st.markdown("## 🏆 Ujian Penguasaan Materi (10 Soal)")
+    st.write("Mari kita lihat seberapa jauh " + nama + " memahami materi ini!")
     
-    # Form interaktif untuk Kuis
-    with st.form("kuis_interaktif"):
-        st.write(st.session_state.kuis_soal)
-        pilihan = st.radio("Pilih jawaban yang paling tepat:", st.session_state.kuis_opsi)
-        cek_jawaban = st.form_submit_button("Cek Jawaban ✔️")
+    with st.form("kuis_form_10"):
+        jawaban_user = []
+        for i, q in enumerate(st.session_state.kuis_data):
+            st.markdown("**" + str(i+1) + ". " + q["soal"] + "**")
+            ans = st.radio("Pilih jawaban:", q["opsi"], key="q_" + str(i), label_visibility="collapsed")
+            jawaban_user.append(ans)
+            st.markdown("<br>", unsafe_allow_html=True)
+            
+        cek_skor = st.form_submit_button("Kumpulkan & Cek Nilai! 🎯")
         
-        if cek_jawaban:
-            # Pengecekan jawaban sederhana
-            if st.session_state.kuis_kunci in pilihan:
-                st.success("Yeay! Jawabanmu TEPAT! Ini hadiah bintang untukmu! ⭐⭐⭐")
-                st.balloons() # Efek balon terbang di layar Streamlit!
+        if cek_skor:
+            skor_benar = 0
+            for i, q in enumerate(st.session_state.kuis_data):
+                # Validasi kunci jawaban sederhana (mencari kecocokan awal string)
+                if jawaban_user[i].startswith(q["kunci"]) or q["kunci"] in jawaban_user[i]:
+                    skor_benar += 1
+            
+            nilai_akhir = (skor_benar / len(st.session_state.kuis_data)) * 100
+            
+            st.markdown("---")
+            if nilai_akhir == 100:
+                st.success("LUAR BIASA! Nilaimu **100**! Benar semua! ⭐⭐⭐⭐⭐")
+                st.balloons()
+            elif nilai_akhir >= 70:
+                st.info("Hebat! Nilaimu **" + str(int(nilai_akhir)) + "** (" + str(skor_benar) + " Benar). Sedikit lagi sempurna!")
             else:
-                st.error("Wah, hampir tepat. Coba dengarkan lagi penjelasan audionya ya, kamu pasti bisa!")
+                st.warning("Nilaimu **" + str(int(nilai_akhir)) + "** (" + str(skor_benar) + " Benar). Jangan menyerah, ayo dengarkan audionya lagi dan coba lagi!")
