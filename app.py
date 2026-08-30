@@ -69,3 +69,80 @@ if submit_button:
                     (Berikan 1-2 soal kuis latihan seru untuk menguji pemahaman {nama})
 
                     ===MASTER_PROMPT_VIDEO===
+                    (Tulis SATU prompt komprehensif dalam BAHASA INGGRIS untuk mesin AI Video Generator. 
+                    Prompt ini WAJIB berisi instruksi ini: "Create an educational video explaining [ISI KONSEP MATERINYA]. Visual style: 3-color doodle animation (white background, dark blue outlines, and one bright accent color like orange or yellow), dynamic drawing motion like a teacher writing on a whiteboard. Audio style: AI generated voiceover in Indonesian language that is friendly and suited for {jenjang_kelas} students, starting with 'Halo {nama}!', explaining the concept naturally and perfectly synced with the visual doodles.")
+                    """
+                    
+                    response = client.models.generate_content(
+                        model='gemini-3.6-flash',
+                        contents=[ux_bridge_prompt, image]
+                    )
+                    full_text = response.text
+                    
+                    # Parsing super aman dengan Regex
+                    ringkasan = "Materi telah dipahami."
+                    kuis = "Ayo belajar!"
+                    video_prompt = "Create an educational doodle animation."
+                    
+                    if "===RINGKASAN_MATERI===" in full_text:
+                        match_ringkasan = re.search(r'===RINGKASAN_MATERI===(.*?)(?====KUIS_INTERAKTIF===|$)', full_text, re.DOTALL)
+                        if match_ringkasan: ringkasan = match_ringkasan.group(1).strip()
+                        
+                    if "===KUIS_INTERAKTIF===" in full_text:
+                        match_kuis = re.search(r'===KUIS_INTERAKTIF===(.*?)(?====MASTER_PROMPT_VIDEO===|$)', full_text, re.DOTALL)
+                        if match_kuis: kuis = match_kuis.group(1).strip()
+                        
+                    if "===MASTER_PROMPT_VIDEO===" in full_text:
+                        match_prompt = re.search(r'===MASTER_PROMPT_VIDEO===(.*)', full_text, re.DOTALL)
+                        if match_prompt: video_prompt = match_prompt.group(1).strip()
+
+                    # Tampilkan ke UI
+                    st.markdown("---")
+                    st.markdown(f"## 📚 Rangkuman Materi ({mapel})")
+                    st.markdown(ringkasan)
+                    
+                    st.markdown("---")
+                    st.markdown(f"## 🏆 Kuis Tantangan untuk {nama}!")
+                    st.markdown(kuis)
+                    
+                    berhasil_baca = True
+                    break # Berhasil, keluar dari loop
+                    
+                except Exception as e:
+                    if "503" in str(e) and percobaan < maksimal_coba - 1:
+                        st.warning(f"Server Google sedang padat. Menunggu 5 detik dan mencoba lagi otomatis... (Percobaan {percobaan + 1}/{maksimal_coba})")
+                        time.sleep(5)
+                    else:
+                        st.error(f"Terjadi kesalahan saat AI membaca materi: {e}")
+                        st.stop()
+                        
+        # TAHAP 2: GENERATE VIDEO (VISUAL & AUDIO OTOMATIS)
+        if berhasil_baca:
+            with st.spinner("2. Merender Video Animasi Doodle 3 Warna... (Ini memakan waktu sekitar 1-2 menit)"):
+                try:
+                    operation = client.models.generate_videos(
+                        model="veo-3.1-fast-generate-preview",
+                        prompt=video_prompt,
+                        config=types.GenerateVideosConfig(
+                            resolution="720p"
+                        )
+                    )
+                    
+                    while not operation.done:
+                        time.sleep(5)
+                        operation = client.operations.get(operation)
+                    
+                    vid_result = operation.result.generated_videos[0]
+                    file_video_final = "hasil_animasi_doodle.mp4"
+                    client.files.download(file=vid_result.video)
+                    vid_result.video.save(file_video_final)
+                    
+                    st.markdown("---")
+                    st.markdown(f"## 🎬 Video Pembelajaran Khusus {nama}:")
+                    st.video(file_video_final)
+                    
+                except Exception as e:
+                    st.error(f"Terjadi kendala pada mesin AI Video Generator: {e}")
+                
+    else:
+        st.warning("Silakan unggah foto halaman bukunya terlebih dahulu!")
