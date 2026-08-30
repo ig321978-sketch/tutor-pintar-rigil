@@ -31,7 +31,8 @@ def buat_suara_premium(teks, nama_file, pilihan_suara):
     response = client_openai.audio.speech.create(
         model="tts-1",
         voice=pilihan_suara,
-        input=teks
+        input=teks,
+        speed=0.5  # <-- Kecepatan dilambatkan 50% agar sangat santai dan mudah diikuti
     )
     response.stream_to_file(nama_file)
 
@@ -88,25 +89,22 @@ if btn_analisis:
             maksimal_coba = 3
             for percobaan in range(maksimal_coba):
                 try:
-                    # PROMPT DIPERBARUI: Memecah Naskah Layar (Angka) dan Naskah Suara (Ejaan Huruf)
-                    ux_bridge_prompt = f"""
-                    Kamu adalah Tutor AI ahli {mapel} yang super sabar. Baca materi dari foto ini untuk siswa {jenjang_kelas} bernama {nama}.
-                    Keluarkan persis 3 bagian berikut dengan format pembatas yang ketat:
-
-                    ===NASKAH_LAYAR===
-                    (Tulis penjelasan materi SANGAT DETAIL. Jika ada "Cara 1", "Cara 2", jelaskan SEMUANYA beserta contoh perhitungan angkanya secara urut. 
-                    FORMAT: Profesional layaknya materi pelajaran. Gunakan angka asli dan simbol matematika (misal: 35 x 2 = 70). Jangan dieja dengan huruf. Sapa {nama} di awal kalimat.)
-
-                    ===NASKAH_SUARA===
-                    (Tulis versi lisan dari NASKAH_LAYAR di atas. Kalimatnya HARUS 100% sama dan sinkron dengan naskah layar, TETAPI semua angka dan simbol matematika WAJIB DIEJA dengan huruf (misal: "tiga puluh lima dikali dua sama dengan tujuh puluh"). Ini agar mesin suara dapat membacanya dengan tepat dan tidak tersendat.)
-
-                    ===KUIS===
-                    (Buatlah 3 soal pilihan ganda dari materi. Wajib gunakan format ini per baris, dipisah dengan 3 garis lurus HANYA:)
-                    Pertanyaan 1?|||Opsi 1|||Opsi 2|||Opsi 3|||Teks Jawaban Benar
-                    Pertanyaan 2?|||Opsi 1|||Opsi 2|||Opsi 3|||Teks Jawaban Benar
-                    Pertanyaan 3?|||Opsi 1|||Opsi 2|||Opsi 3|||Teks Jawaban Benar
-                    (PENTING: Bagian akhir HANYA boleh berisi TEKS JAWABAN BENAR yang persis sama dengan isi salah satu opsi)
-                    """
+                    # PROMPT: Naskah Layar Profesional vs Naskah Suara Penuh Ejaan
+                    ux_bridge_prompt = (
+                        "Kamu adalah Tutor AI ahli " + mapel + " yang super sabar. Baca materi dari foto ini untuk siswa " + jenjang_kelas + " bernama " + nama + ".\n"
+                        "Keluarkan persis 3 bagian berikut dengan format pembatas yang ketat:\n\n"
+                        "===NASKAH_LAYAR===\n"
+                        "(Tulis penjelasan materi SANGAT DETAIL. Jika ada 'Cara 1', 'Cara 2', jelaskan SEMUANYA beserta contoh perhitungan angkanya secara urut. "
+                        "FORMAT: Profesional layaknya materi pelajaran. Gunakan angka asli dan simbol matematika (misal: 35 x 2 = 70). Jangan dieja dengan huruf. Sapa " + nama + " di awal kalimat.)\n\n"
+                        "===NASKAH_SUARA===\n"
+                        "(Tulis versi lisan dari NASKAH_LAYAR di atas. Kalimatnya HARUS 100% sama dan sinkron dengan naskah layar, TETAPI semua angka dan simbol matematika WAJIB DIEJA dengan huruf (misal: 'tiga puluh lima dikali dua sama dengan tujuh puluh'). Ini agar mesin suara dapat membacanya dengan tepat dan tidak tersendat.)\n\n"
+                        "===KUIS===\n"
+                        "(Buatlah 3 soal pilihan ganda dari materi. Wajib gunakan format ini per baris, dipisah dengan 3 garis lurus HANYA:)\n"
+                        "Pertanyaan 1?|||Opsi 1|||Opsi 2|||Opsi 3|||Teks Jawaban Benar\n"
+                        "Pertanyaan 2?|||Opsi 1|||Opsi 2|||Opsi 3|||Teks Jawaban Benar\n"
+                        "Pertanyaan 3?|||Opsi 1|||Opsi 2|||Opsi 3|||Teks Jawaban Benar\n"
+                        "(PENTING: Bagian akhir HANYA boleh berisi TEKS JAWABAN BENAR yang persis sama dengan isi salah satu opsi)"
+                    )
                     
                     response = client_gemini.models.generate_content(
                         model='gemini-3.6-flash',
@@ -175,7 +173,7 @@ if st.session_state.berhasil_baca:
             st.markdown(f"**{i+1}. {q['soal']}**")
             
             # index=None agar lingkaran merah (radio) kosong saat awal dimuat
-            jawaban_user = st.radio("Pilih jawaban:", q['opsi'], key=f"soal_{i}", index=None, label_visibility="collapsed")
+            jawaban_user = st.radio("Pilih jawaban:", q['opsi'], key=f"soal_radio_{i}", index=None, label_visibility="collapsed")
             
             # Tombol Cek Jawaban (tanpa checklist)
             if st.button(f"Cek Jawaban Soal {i+1}", key=f"btn_cek_{i}"):
