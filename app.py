@@ -81,7 +81,7 @@ if submit_button:
                 
                 # Memanggil Model Teks (Gemini 2.5)
                 response = client.models.generate_content(
-                    model='gemini-2.5-flash',
+                    model='gemini-3.5-flash-lite',
                     contents=[master_prompt, image]
                 )
                 full_text = response.text
