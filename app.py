@@ -9,10 +9,9 @@ import moviepy.config as mp_config
 import os
 import re
 
-# Mengaktifkan jalur FFmpeg otomatis
 mp_config.ffmpeg_binary = imageio_ffmpeg.get_ffmpeg_exe()
 
-# --- KONFIGURASI API GEMINI (AMAN DENGAN STREAMLIT SECRETS) ---
+# --- KONFIGURASI API GEMINI ---
 try:
     GEMINI_API_KEY = st.secrets["GEMINI_API_KEY"]
 except Exception:
@@ -21,40 +20,44 @@ except Exception:
 genai.configure(api_key=GEMINI_API_KEY)
 model = genai.GenerativeModel('gemini-3.5-flash-lite')
 
-# --- FUNGSI PEMBUAT SLIDE VISUAL DINAMIS ---
-def buat_slide_dinamis(judul, teks_cerita, nomor_scene, total_scene, nama_file):
-    img = Image.new('RGB', (1280, 720), color=(255, 255, 255))
+# --- FUNGSI PEMBUAT ILUSTRASI KARTU DINAMIS ---
+def buat_slide_ilustrasi(judul, teks_cerita, nomor_scene, total_scene, nama_file):
+    # Membuat kanvas dengan latar belakang gradasi warna lembut yang ceria
+    img = Image.new('RGB', (1280, 720), color=(240, 244, 248))
     d = ImageDraw.Draw(img)
     
-    # Header / Panel Judul Atas
-    d.rectangle([40, 40, 1240, 130], fill=(41, 128, 185))
-    d.text((70, 70), f"🎓 {judul} — Adegan {nomor_scene} dari {total_scene}", fill=(255, 255, 255))
+    # Kotak Kartu Konten Utama (Efek Kartu Ilustrasi)
+    d.rectangle([60, 40, 1220, 620], fill=(255, 255, 255), outline=(200, 214, 229), width=3)
     
-    # Format teks per baris agar rapi
+    # Header Kartu / Panel Atas
+    d.rectangle([60, 40, 1220, 140], fill=(52, 152, 219))
+    d.text((90, 80), f"🌟 {judul} — Adegan {nomor_scene} dari {total_scene}", fill=(255, 255, 255))
+    
+    # Format teks penjelasan agar rapi di dalam kartu
     words = teks_cerita.split()
     lines = []
     current_line = ""
     for word in words:
-        if len(current_line + " " + word) < 70:
+        if len(current_line + " " + word) < 65:
             current_line += " " + word if current_line else word
         else:
             lines.append(current_line)
             current_line = word
     lines.append(current_line)
     
-    y_text = 180
-    for line in lines[:12]: 
-        d.text((70, y_text), line, fill=(44, 62, 80))
-        y_text = y_text + 40
+    y_text = 190
+    for line in lines[:11]: 
+        d.text((90, y_text), line, fill=(44, 62, 80))
+        y_text = y_text + 42
         
-    # Footer slide penanda aktif
-    d.rectangle([40, 640, 1240, 680], fill=(236, 240, 241))
-    d.text((70, 650), "✨ Tutor Pintar AI — Visual Bergeser Otomatis", fill=(127, 140, 141))
+    # Footer Ilustrasi
+    d.rectangle([60, 620, 1220, 680], fill=(236, 240, 241))
+    d.text((90, 638), "🚀 Tutor Pintar AI — Belajar Seru, Interaktif & Visual", fill=(127, 140, 141))
     
     img.save(nama_file)
     return nama_file
 
-# --- FUNGSI SUARA NARATOR REALISTIS ---
+# --- FUNGSI SUARA NARATOR ---
 async def buat_suara_realistis(teks, nama_file):
     communicate = edge_tts.Communicate(teks, "id-ID-GadisNeural")
     await communicate.save(nama_file)
@@ -62,8 +65,8 @@ async def buat_suara_realistis(teks, nama_file):
 # --- ANTARMUKA APLIKASI ---
 st.set_page_config(page_title="Tutor Pintar Profesional", page_icon="🎓", layout="centered")
 
-st.title("🎓 Tutor Pintar AI - Video Dinamis Berganti Adegan")
-st.write("Unggah foto buku, dan AI akan merender video presentasi dengan transisi adegan yang aktif!")
+st.title("🎓 Tutor Pintar AI - Video Ilustrasi & Animasi Dinamis")
+st.write("Unggah foto buku, dan AI akan merender video animasi slide ilustrasi yang bergerak aktif!")
 
 with st.form("user_form"):
     nama = st.text_input("Nama Siswa:", "Rigil Atriani")
@@ -74,7 +77,7 @@ with st.form("user_form"):
     ], index=2)
     mapel = st.text_input("Mata Pelajaran:", "Matematika")
     uploaded_file = st.file_uploader("Foto Halaman Buku Pelajaran:", type=["jpg", "jpeg", "png"])
-    submit_button = st.form_submit_button(label="Render Video Dinamis! 🎬")
+    submit_button = st.form_submit_button(label="Render Video Animasi! 🎬")
 
 # --- PROSES UTAMA ---
 if submit_button:
@@ -85,9 +88,9 @@ if submit_button:
         with col1:
             st.image(image, caption="Buku Pelajaran Asli", use_container_width=True)
         with col2:
-            st.info(f"✨ **Halo {nama}!**\nTutor sedang memecah materi {mapel} menjadi banyak adegan dinamis.")
+            st.info(f"✨ **Halo {nama}!**\nTutor sedang merancang ilustrasi animasi untuk materi {mapel}.")
         
-        with st.spinner("Menganalisis materi, merekam suara natural, dan merender adegan..."):
+        with st.spinner("Menganalisis materi, merekam suara, dan merender animasi video..."):
             try:
                 if "SD" in jenjang_kelas:
                     gaya = "ramah, ceria, menggunakan analogi sehari-hari yang seru untuk anak-anak."
@@ -119,13 +122,13 @@ if submit_button:
                 audio_clip = AudioFileClip(file_suara)
                 total_duration = audio_clip.duration
                 
-                # PEMOTONGAN CERDAS MENJADI BANYAK ADEGAN
+                # Pemecahan Kalimat Menjadi Adegan Ilustrasi
                 kalimat_list = [k.strip() for k in re.split(r'(?<=[.!?])\s+', teks_bersih) if k.strip()]
                 
                 scene_list = []
                 temp_chunk = ""
                 for kalimat in kalimat_list:
-                    if len(temp_chunk + " " + kalimat) < 250:
+                    if len(temp_chunk + " " + kalimat) < 220:
                         temp_chunk += " " + kalimat if temp_chunk else kalimat
                     else:
                         scene_list.append(temp_chunk)
@@ -141,12 +144,17 @@ if submit_button:
                 jumlah_scene = len(scene_list)
                 durasi_per_scene = total_duration / jumlah_scene
                 
-                # Render Klip Slide Multi-Scene Aktif (Menggunakan set_duration & set_audio untuk MoviePy v1.0.3)
+                # Render Klip Animasi dengan Efek Zoom Dinamis (Ken Burns Effect)
                 video_clips = []
                 for i, scene_teks in enumerate(scene_list):
-                    slide_path = buat_slide_dinamis(f"Materi {mapel} ({jenjang_kelas})", scene_teks, i+1, jumlah_scene, f"scene_{i+1}.jpg")
+                    slide_path = buat_slide_ilustrasi(f"Materi {mapel} ({jenjang_kelas})", scene_teks, i+1, jumlah_scene, f"scene_{i+1}.jpg")
+                    
+                    # Membuat klip gambar dengan durasi tertentu
                     slide_clip = ImageClip(slide_path).set_duration(durasi_per_scene)
-                    video_clips.append(slide_clip)
+                    
+                    # Menambahkan efek animasi perbesaran dinamis (Zoom-in perlahan agar terasa hidup)
+                    animated_clip = slide_clip.resize(lambda t: 1.0 + 0.04 * (t / durasi_per_scene))
+                    video_clips.append(animated_clip)
                 
                 final_visual_clip = concatenate_videoclips(video_clips)
                 final_video = final_visual_clip.set_audio(audio_clip)
@@ -155,7 +163,7 @@ if submit_button:
                 final_video.write_videofile(file_video, fps=24, codec="libx264", audio_codec="aac", logger=None)
                 
                 st.markdown("---")
-                st.markdown("### 🎬 Pemutar Video Presentasi Dinamis:")
+                st.markdown("### 🎬 Pemutar Video Ilustrasi & Animasi:")
                 st.video(file_video)
                 
             except Exception as e:
