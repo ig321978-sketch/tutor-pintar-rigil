@@ -1,5 +1,4 @@
 streamlit
 pillow
 google-genai
-moviepy==1.0.3
-imageio-ffmpeg
+edge-tts
