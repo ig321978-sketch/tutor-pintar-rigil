@@ -36,13 +36,12 @@ try:
 except Exception as e:
     client_tts = None
     st.session_state.pesan_error_json = str(e)
-    # Membuat pesan error lebih mudah dipahami
     if "GOOGLE_CREDENTIALS_JSON" in str(e):
          st.session_state.pesan_error_json = "Nama variabel 'GOOGLE_CREDENTIALS_JSON' tidak ditemukan di Secrets."
     elif "Expecting value" in str(e):
          st.session_state.pesan_error_json = "Format JSON berantakan. Pastikan Anda memakai tiga tanda kutip."
 
-# --- FUNGSI PEMBUAT SUARA GOOGLE PREMIUM (NEURAL2) ---
+# --- FUNGSI PEMBUAT SUARA GOOGLE PREMIUM (WAVENET) ---
 def buat_suara_google(teks, nama_file, nama_suara):
     if not client_tts:
         raise Exception("Kunci JSON belum siap!")
@@ -97,7 +96,6 @@ if btn_analisis:
     elif mode_belajar == "✍️ Ketik Judul Materi" and not judul_materi:
         st.warning("Silakan ketik judul materi yang ingin dipelajari!")
     else:
-        # DETEKTOR ERROR MENYALA DI SINI
         if not client_tts:
             st.error(f"**Gagal membaca Kunci JSON Google!**")
             st.warning(f"Laporan Sistem: `{st.session_state.pesan_error_json}`")
@@ -110,12 +108,13 @@ if btn_analisis:
         
         with st.spinner("AI sedang menyusun materi, penjelasan detail, dan merekam suara Google..."):
             
+            # MENGGUNAKAN SUARA GOOGLE WAVENET (DEEPMIND)
             if "SD" in jenjang_kelas:
-                karakter_suara = "id-ID-Neural2-D" 
+                karakter_suara = "id-ID-Wavenet-D" # Suara Perempuan 1 (Ramah & Hangat)
             elif "SMP" in jenjang_kelas:
-                karakter_suara = "id-ID-Neural2-A" 
+                karakter_suara = "id-ID-Wavenet-A" # Suara Perempuan 2 (Luwes & Bersahabat)
             else:
-                karakter_suara = "id-ID-Neural2-B" 
+                karakter_suara = "id-ID-Wavenet-B" # Suara Laki-laki (Berwibawa)
 
             instruksi_format = f"""
             Keluarkan persis 3 bagian berikut dengan format pembatas yang ketat:
