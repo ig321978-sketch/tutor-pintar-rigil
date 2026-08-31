@@ -1,40 +1,52 @@
 import streamlit as st
 import re
 import time
+import json
 from PIL import Image
 from google import genai
-from openai import OpenAI
+from google.cloud import texttospeech
+from google.oauth2 import service_account
 
-# --- KONFIGURASI KUNCI API ---
+# --- KONFIGURASI KUNCI API & GOOGLE CLOUD ---
 try:
     API_KEY = st.secrets["GEMINI_API_KEY"]
 except Exception:
     API_KEY = "MASUKKAN_GEMINI_API_KEY_ANDA_DI_SINI"
 
-try:
-    OPENAI_KEY = st.secrets["OPENAI_API_KEY"]
-except Exception:
-    OPENAI_KEY = "MASUKKAN_OPENAI_API_KEY_ANDA_DI_SINI"
-
 client_gemini = genai.Client(api_key=API_KEY)
 
-if OPENAI_KEY and OPENAI_KEY != "MASUKKAN_OPENAI_API_KEY_ANDA_DI_SINI":
-    client_openai = OpenAI(api_key=OPENAI_KEY)
-else:
-    client_openai = None
+try:
+    # Membaca file JSON utuh dari Streamlit Secrets
+    gcp_json_str = st.secrets["GOOGLE_CREDENTIALS_JSON"]
+    gcp_creds_dict = json.loads(gcp_json_str)
+    gcp_credentials = service_account.Credentials.from_service_account_info(gcp_creds_dict)
+    client_tts = texttospeech.TextToSpeechClient(credentials=gcp_credentials)
+except Exception as e:
+    client_tts = None
 
-# --- FUNGSI PEMBUAT SUARA MANUSIA PREMIUM (OPENAI) ---
-def buat_suara_premium(teks, nama_file, pilihan_suara):
-    if not client_openai:
-        raise Exception("API Key OpenAI belum dikonfigurasi di Secrets!")
+# --- FUNGSI PEMBUAT SUARA GOOGLE PREMIUM (NEURAL2) ---
+def buat_suara_google(teks, nama_file, nama_suara):
+    if not client_tts:
+        raise Exception("Kunci JSON Google Cloud belum terpasang dengan benar di menu Secrets!")
     
-    response = client_openai.audio.speech.create(
-        model="tts-1",
-        voice=pilihan_suara,
-        input=teks,
-        speed=0.5  # Kecepatan dilambatkan 50%
+    synthesis_input = texttospeech.SynthesisInput(text=teks)
+    
+    voice = texttospeech.VoiceSelectionParams(
+        language_code="id-ID",
+        name=nama_suara
     )
-    response.stream_to_file(nama_file)
+    
+    audio_config = texttospeech.AudioConfig(
+        audio_encoding=texttospeech.AudioEncoding.MP3,
+        speaking_rate=0.75  # <-- Kecepatan dilambatkan agar sangat jelas dan santai
+    )
+    
+    response = client_tts.synthesize_speech(
+        input=synthesis_input, voice=voice, audio_config=audio_config
+    )
+    
+    with open(nama_file, "wb") as out:
+        out.write(response.audio_content)
 
 # --- INISIALISASI SESSION STATE ---
 if 'berhasil_baca' not in st.session_state:
@@ -50,9 +62,9 @@ if 'daftar_kuis' not in st.session_state:
 st.set_page_config(page_title="Tutor Pintar Rigil", page_icon="🎓", layout="centered")
 
 st.title("🎓 Tutor Pintar Rigil")
-st.write("Asisten belajar cerdas dengan suara AI natural. Belajar dari buku atau cari materi baru!")
+st.write("Asisten belajar cerdas dengan suara AI Google Premium. Belajar dari buku atau cari materi baru!")
 
-# --- PEMILIHAN SUMBER MATERI (Berada di luar form agar antarmuka responsif seketika) ---
+# --- PEMILIHAN SUMBER MATERI ---
 st.markdown("---")
 mode_belajar = st.radio("Pilih Sumber Materi:", ["📸 Unggah Foto Buku", "✍️ Ketik Judul Materi"], horizontal=True)
 
@@ -66,40 +78,40 @@ with st.form("user_form"):
     ], index=2)
     mapel = st.text_input("Mata Pelajaran:", "Matematika")
     
-    # Antarmuka berubah secara dinamis berdasarkan pilihan radio button
     if mode_belajar == "📸 Unggah Foto Buku":
-        uploaded_files = st.file_uploader("Foto Halaman Buku Pelajaran (Bisa lebih dari 1 halaman):", type=["jpg", "jpeg", "png"], accept_multiple_files=True)
+        uploaded_files = st.file_uploader("Foto Halaman Buku Pelajaran (Bisa lebih dari 1):", type=["jpg", "jpeg", "png"], accept_multiple_files=True)
         judul_materi = ""
     else:
-        judul_materi = st.text_input("Topik/Judul Materi yang Ingin Dipelajari (misal: Perkalian Bersusun, Tata Surya):")
+        judul_materi = st.text_input("Topik/Judul Materi yang Ingin Dipelajari (misal: Perkalian Bersusun):")
         uploaded_files = []
     
     btn_analisis = st.form_submit_button(label="Mulai Belajar! 🚀")
 
-# --- PROSES ANALISIS AI (DENGAN SMART RETRY) ---
+# --- PROSES ANALISIS AI ---
 if btn_analisis:
-    # Validasi Input Kosong
     if mode_belajar == "📸 Unggah Foto Buku" and not uploaded_files:
         st.warning("Silakan unggah minimal satu foto buku dulu ya!")
     elif mode_belajar == "✍️ Ketik Judul Materi" and not judul_materi:
         st.warning("Silakan ketik judul materi yang ingin dipelajari!")
     else:
-        # Menghapus memori kuis lama setiap kali proses baru dimulai
+        if not client_tts:
+            st.error("Gagal! Kunci JSON Google belum terbaca. Cek kembali pengaturan Secrets Anda.")
+            st.stop()
+            
         for key in list(st.session_state.keys()):
             if key.startswith('status_soal_'):
                 del st.session_state[key]
         
-        with st.spinner("AI sedang menyusun materi, penjelasan detail, dan merekam suara..."):
+        with st.spinner("AI sedang menyusun materi, penjelasan detail, dan merekam suara Google..."):
             
-            # Pengaturan karakter suara 
+            # Pengaturan karakter suara Google Neural2
             if "SD" in jenjang_kelas:
-                karakter_suara = "nova"
+                karakter_suara = "id-ID-Neural2-D" # Suara Perempuan (Paling natural dan ramah)
             elif "SMP" in jenjang_kelas:
-                karakter_suara = "echo"
+                karakter_suara = "id-ID-Neural2-A" # Suara Perempuan (Ceria)
             else:
-                karakter_suara = "alloy"
+                karakter_suara = "id-ID-Neural2-B" # Suara Laki-laki (Berwibawa)
 
-            # Pembentukan Payload AI Berdasarkan Mode
             instruksi_format = f"""
             Keluarkan persis 3 bagian berikut dengan format pembatas yang ketat:
 
@@ -127,10 +139,9 @@ if btn_analisis:
                 konteks = f"Kamu adalah Tutor AI ahli {mapel} yang super sabar. Baca materi dari SEMUA foto halaman buku terlampir ini secara berurutan untuk siswa {jenjang_kelas} bernama {nama}."
                 payload_ai = [konteks + "\n\n" + instruksi_format] + daftar_gambar
             else:
-                konteks = f"Kamu adalah Tutor AI ahli {mapel} yang super sabar. Susun dan buatkan materi pembelajaran yang komprehensif, akurat, dan sesuai kurikulum tentang topik: '{judul_materi}'. Materi ini ditujukan untuk siswa {jenjang_kelas} bernama {nama}."
+                konteks = f"Kamu adalah Tutor AI ahli {mapel} yang super sabar. Susun materi pembelajaran yang detail tentang topik: '{judul_materi}'. Materi ditujukan untuk siswa {jenjang_kelas} bernama {nama}."
                 payload_ai = [konteks + "\n\n" + instruksi_format]
 
-            # Mengeksekusi Permintaan ke AI
             maksimal_coba = 3
             for percobaan in range(maksimal_coba):
                 try:
@@ -140,21 +151,17 @@ if btn_analisis:
                     )
                     full_text = response.text
                     
-                    # Parsing Naskah Layar
                     if "===NASKAH_LAYAR===" in full_text:
                         match_l = re.search(r'===NASKAH_LAYAR===(.*?)(?====NASKAH_SUARA===|$)', full_text, re.DOTALL)
-                        if match_l: 
-                            st.session_state.naskah_layar = match_l.group(1).strip()
+                        if match_l: st.session_state.naskah_layar = match_l.group(1).strip()
                     
-                    # Parsing Naskah Suara & Generate Audio
                     if "===NASKAH_SUARA===" in full_text:
                         match_s = re.search(r'===NASKAH_SUARA===(.*?)(?====KUIS===|$)', full_text, re.DOTALL)
                         if match_s: 
                             naskah_suara = match_s.group(1).strip()
                             naskah_bersih = re.sub(r'[*#_`>-]', '', naskah_suara)
-                            buat_suara_premium(naskah_bersih, st.session_state.file_suara, karakter_suara)
+                            buat_suara_google(naskah_bersih, st.session_state.file_suara, karakter_suara)
                     
-                    # Parsing Kuis
                     if "===KUIS===" in full_text:
                         match_k = re.search(r'===KUIS===(.*)', full_text, re.DOTALL)
                         if match_k: 
@@ -186,7 +193,7 @@ if btn_analisis:
 if st.session_state.berhasil_baca:
     st.markdown("---")
     st.markdown("## 🎧 Dengarkan & Baca Penjelasan Guru")
-    st.info("💡 Putar suara di bawah ini, lalu ikuti teksnya. Suara akan membaca teks ini dengan detail!")
+    st.info("💡 Putar suara di bawah ini, lalu ikuti teksnya. Suara AI Google akan membacakan teks ini dengan detail!")
     
     st.audio(st.session_state.file_suara, format="audio/mp3")
     st.markdown(st.session_state.naskah_layar)
