@@ -7,47 +7,6 @@ from google import genai
 from google.cloud import texttospeech
 from google.oauth2 import service_account
 
-# --- KONFIGURASI KUNCI API & GOOGLE CLOUD ---
-try:
-    API_KEY = st.secrets["GEMINI_API_KEY"]
-except Exception:
-    API_KEY = "MASUKKAN_GEMINI_API_KEY_ANDA_DI_SINI"
-
-client_gemini = genai.Client(api_key=API_KEY)
-
-try:
-    # Membaca file JSON utuh dari Streamlit Secrets
-    gcp_json_str = st.secrets["GOOGLE_CREDENTIALS_JSON"]
-    gcp_creds_dict = json.loads(gcp_json_str)
-    gcp_credentials = service_account.Credentials.from_service_account_info(gcp_creds_dict)
-    client_tts = texttospeech.TextToSpeechClient(credentials=gcp_credentials)
-except Exception as e:
-    client_tts = None
-
-# --- FUNGSI PEMBUAT SUARA GOOGLE PREMIUM (NEURAL2) ---
-def buat_suara_google(teks, nama_file, nama_suara):
-    if not client_tts:
-        raise Exception("Kunci JSON Google Cloud belum terpasang dengan benar di menu Secrets!")
-    
-    synthesis_input = texttospeech.SynthesisInput(text=teks)
-    
-    voice = texttospeech.VoiceSelectionParams(
-        language_code="id-ID",
-        name=nama_suara
-    )
-    
-    audio_config = texttospeech.AudioConfig(
-        audio_encoding=texttospeech.AudioEncoding.MP3,
-        speaking_rate=0.75  # <-- Kecepatan dilambatkan agar sangat jelas dan santai
-    )
-    
-    response = client_tts.synthesize_speech(
-        input=synthesis_input, voice=voice, audio_config=audio_config
-    )
-    
-    with open(nama_file, "wb") as out:
-        out.write(response.audio_content)
-
 # --- INISIALISASI SESSION STATE ---
 if 'berhasil_baca' not in st.session_state:
     st.session_state.berhasil_baca = False
@@ -57,6 +16,50 @@ if 'file_suara' not in st.session_state:
     st.session_state.file_suara = "audio_guru.mp3"
 if 'daftar_kuis' not in st.session_state:
     st.session_state.daftar_kuis = []
+if 'pesan_error_json' not in st.session_state:
+    st.session_state.pesan_error_json = ""
+
+# --- KONFIGURASI KUNCI API & GOOGLE CLOUD ---
+try:
+    API_KEY = st.secrets["GEMINI_API_KEY"]
+except Exception:
+    API_KEY = "MASUKKAN_GEMINI_API_KEY_ANDA_DI_SINI"
+
+client_gemini = genai.Client(api_key=API_KEY)
+
+# Blok Deteksi Error JSON
+try:
+    gcp_json_str = st.secrets["GOOGLE_CREDENTIALS_JSON"]
+    gcp_creds_dict = json.loads(gcp_json_str)
+    gcp_credentials = service_account.Credentials.from_service_account_info(gcp_creds_dict)
+    client_tts = texttospeech.TextToSpeechClient(credentials=gcp_credentials)
+except Exception as e:
+    client_tts = None
+    st.session_state.pesan_error_json = str(e)
+    # Membuat pesan error lebih mudah dipahami
+    if "GOOGLE_CREDENTIALS_JSON" in str(e):
+         st.session_state.pesan_error_json = "Nama variabel 'GOOGLE_CREDENTIALS_JSON' tidak ditemukan di Secrets."
+    elif "Expecting value" in str(e):
+         st.session_state.pesan_error_json = "Format JSON berantakan. Pastikan Anda memakai tiga tanda kutip."
+
+# --- FUNGSI PEMBUAT SUARA GOOGLE PREMIUM (NEURAL2) ---
+def buat_suara_google(teks, nama_file, nama_suara):
+    if not client_tts:
+        raise Exception("Kunci JSON belum siap!")
+    
+    synthesis_input = texttospeech.SynthesisInput(text=teks)
+    voice = texttospeech.VoiceSelectionParams(language_code="id-ID", name=nama_suara)
+    audio_config = texttospeech.AudioConfig(
+        audio_encoding=texttospeech.AudioEncoding.MP3,
+        speaking_rate=0.75  # Kecepatan dilambatkan
+    )
+    
+    response = client_tts.synthesize_speech(
+        input=synthesis_input, voice=voice, audio_config=audio_config
+    )
+    
+    with open(nama_file, "wb") as out:
+        out.write(response.audio_content)
 
 # --- ANTARMUKA PENGGUNA (UI) UTAMA ---
 st.set_page_config(page_title="Tutor Pintar Rigil", page_icon="🎓", layout="centered")
@@ -82,7 +85,7 @@ with st.form("user_form"):
         uploaded_files = st.file_uploader("Foto Halaman Buku Pelajaran (Bisa lebih dari 1):", type=["jpg", "jpeg", "png"], accept_multiple_files=True)
         judul_materi = ""
     else:
-        judul_materi = st.text_input("Topik/Judul Materi yang Ingin Dipelajari (misal: Perkalian Bersusun):")
+        judul_materi = st.text_input("Topik/Judul Materi yang Ingin Dipelajari:")
         uploaded_files = []
     
     btn_analisis = st.form_submit_button(label="Mulai Belajar! 🚀")
@@ -94,8 +97,11 @@ if btn_analisis:
     elif mode_belajar == "✍️ Ketik Judul Materi" and not judul_materi:
         st.warning("Silakan ketik judul materi yang ingin dipelajari!")
     else:
+        # DETEKTOR ERROR MENYALA DI SINI
         if not client_tts:
-            st.error("Gagal! Kunci JSON Google belum terbaca. Cek kembali pengaturan Secrets Anda.")
+            st.error(f"**Gagal membaca Kunci JSON Google!**")
+            st.warning(f"Laporan Sistem: `{st.session_state.pesan_error_json}`")
+            st.info("Silakan cek kembali kotak Settings > Secrets di Streamlit Anda.")
             st.stop()
             
         for key in list(st.session_state.keys()):
@@ -104,13 +110,12 @@ if btn_analisis:
         
         with st.spinner("AI sedang menyusun materi, penjelasan detail, dan merekam suara Google..."):
             
-            # Pengaturan karakter suara Google Neural2
             if "SD" in jenjang_kelas:
-                karakter_suara = "id-ID-Neural2-D" # Suara Perempuan (Paling natural dan ramah)
+                karakter_suara = "id-ID-Neural2-D" 
             elif "SMP" in jenjang_kelas:
-                karakter_suara = "id-ID-Neural2-A" # Suara Perempuan (Ceria)
+                karakter_suara = "id-ID-Neural2-A" 
             else:
-                karakter_suara = "id-ID-Neural2-B" # Suara Laki-laki (Berwibawa)
+                karakter_suara = "id-ID-Neural2-B" 
 
             instruksi_format = f"""
             Keluarkan persis 3 bagian berikut dengan format pembatas yang ketat:
