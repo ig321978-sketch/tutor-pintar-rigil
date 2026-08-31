@@ -50,9 +50,13 @@ if 'daftar_kuis' not in st.session_state:
 st.set_page_config(page_title="Tutor Pintar Rigil", page_icon="🎓", layout="centered")
 
 st.title("🎓 Tutor Pintar Rigil")
-st.write("Belajar asik dengan asisten suara AI yang 100% natural, membaca materi secara tuntas!")
+st.write("Asisten belajar cerdas dengan suara AI natural. Belajar dari buku atau cari materi baru!")
 
-# --- FORMULIR UNGGAH BUKU ---
+# --- PEMILIHAN SUMBER MATERI (Berada di luar form agar antarmuka responsif seketika) ---
+st.markdown("---")
+mode_belajar = st.radio("Pilih Sumber Materi:", ["📸 Unggah Foto Buku", "✍️ Ketik Judul Materi"], horizontal=True)
+
+# --- FORMULIR DATA SISWA ---
 with st.form("user_form"):
     nama = st.text_input("Nama Siswa:", "Rigil")
     jenjang_kelas = st.selectbox("Jenjang & Kelas:", [
@@ -62,31 +66,30 @@ with st.form("user_form"):
     ], index=2)
     mapel = st.text_input("Mata Pelajaran:", "Matematika")
     
-    # FITUR BARU: accept_multiple_files=True mengizinkan unggah lebih dari 1 gambar
-    uploaded_files = st.file_uploader("Foto Halaman Buku Pelajaran (Bisa lebih dari 1 halaman):", type=["jpg", "jpeg", "png"], accept_multiple_files=True)
+    # Antarmuka berubah secara dinamis berdasarkan pilihan radio button
+    if mode_belajar == "📸 Unggah Foto Buku":
+        uploaded_files = st.file_uploader("Foto Halaman Buku Pelajaran (Bisa lebih dari 1 halaman):", type=["jpg", "jpeg", "png"], accept_multiple_files=True)
+        judul_materi = ""
+    else:
+        judul_materi = st.text_input("Topik/Judul Materi yang Ingin Dipelajari (misal: Perkalian Bersusun, Tata Surya):")
+        uploaded_files = []
     
     btn_analisis = st.form_submit_button(label="Mulai Belajar! 🚀")
 
 # --- PROSES ANALISIS AI (DENGAN SMART RETRY) ---
 if btn_analisis:
-    # Memeriksa apakah daftar file yang diunggah tidak kosong
-    if uploaded_files: 
-        
-        # Mengubah semua file yang diunggah menjadi format gambar
-        daftar_gambar = [Image.open(file) for file in uploaded_files]
-        
-        # Menampilkan semua gambar yang diunggah secara berjejer
-        st.write("📸 **Buku Pelajaran Asli:**")
-        kolom_gambar = st.columns(len(daftar_gambar)) if len(daftar_gambar) <= 3 else st.columns(3)
-        for i, img in enumerate(daftar_gambar):
-            kolom_gambar[i % len(kolom_gambar)].image(img, use_container_width=True)
-        
-        # Menghapus memori kuis lama setiap kali mengunggah materi baru
+    # Validasi Input Kosong
+    if mode_belajar == "📸 Unggah Foto Buku" and not uploaded_files:
+        st.warning("Silakan unggah minimal satu foto buku dulu ya!")
+    elif mode_belajar == "✍️ Ketik Judul Materi" and not judul_materi:
+        st.warning("Silakan ketik judul materi yang ingin dipelajari!")
+    else:
+        # Menghapus memori kuis lama setiap kali proses baru dimulai
         for key in list(st.session_state.keys()):
             if key.startswith('status_soal_'):
                 del st.session_state[key]
         
-        with st.spinner("AI sedang merangkum seluruh halaman, menyiapkan penjelasan detail, dan merekam suara..."):
+        with st.spinner("AI sedang menyusun materi, penjelasan detail, dan merekam suara..."):
             
             # Pengaturan karakter suara 
             if "SD" in jenjang_kelas:
@@ -96,31 +99,44 @@ if btn_analisis:
             else:
                 karakter_suara = "alloy"
 
+            # Pembentukan Payload AI Berdasarkan Mode
+            instruksi_format = f"""
+            Keluarkan persis 3 bagian berikut dengan format pembatas yang ketat:
+
+            ===NASKAH_LAYAR===
+            (Tulis penjelasan materi SANGAT DETAIL. Jika itu matematika, berikan contoh perhitungan angkanya secara urut. FORMAT: Profesional layaknya materi pelajaran. Gunakan angka asli dan simbol matematika. Sapa {nama} di awal kalimat.)
+
+            ===NASKAH_SUARA===
+            (Tulis versi lisan dari NASKAH_LAYAR di atas. Kalimatnya HARUS 100% sama dan sinkron dengan naskah layar, TETAPI semua angka dan simbol matematika WAJIB DIEJA dengan huruf. Ini agar mesin suara dapat membacanya dengan tepat dan tidak tersendat.)
+
+            ===KUIS===
+            (Buatlah 3 soal pilihan ganda dari materi tersebut. Wajib gunakan format ini per baris, dipisah dengan 3 garis lurus HANYA:)
+            Pertanyaan 1?|||Opsi 1|||Opsi 2|||Opsi 3|||Teks Jawaban Benar
+            Pertanyaan 2?|||Opsi 1|||Opsi 2|||Opsi 3|||Teks Jawaban Benar
+            Pertanyaan 3?|||Opsi 1|||Opsi 2|||Opsi 3|||Teks Jawaban Benar
+            (PENTING: Bagian akhir HANYA boleh berisi TEKS JAWABAN BENAR yang persis sama dengan isi salah satu opsi)
+            """
+
+            if mode_belajar == "📸 Unggah Foto Buku":
+                daftar_gambar = [Image.open(file) for file in uploaded_files]
+                st.write("📸 **Buku Pelajaran Asli:**")
+                kolom_gambar = st.columns(len(daftar_gambar)) if len(daftar_gambar) <= 3 else st.columns(3)
+                for i, img in enumerate(daftar_gambar):
+                    kolom_gambar[i % len(kolom_gambar)].image(img, use_container_width=True)
+                
+                konteks = f"Kamu adalah Tutor AI ahli {mapel} yang super sabar. Baca materi dari SEMUA foto halaman buku terlampir ini secara berurutan untuk siswa {jenjang_kelas} bernama {nama}."
+                payload_ai = [konteks + "\n\n" + instruksi_format] + daftar_gambar
+            else:
+                konteks = f"Kamu adalah Tutor AI ahli {mapel} yang super sabar. Susun dan buatkan materi pembelajaran yang komprehensif, akurat, dan sesuai kurikulum tentang topik: '{judul_materi}'. Materi ini ditujukan untuk siswa {jenjang_kelas} bernama {nama}."
+                payload_ai = [konteks + "\n\n" + instruksi_format]
+
+            # Mengeksekusi Permintaan ke AI
             maksimal_coba = 3
             for percobaan in range(maksimal_coba):
                 try:
-                    ux_bridge_prompt = (
-                        "Kamu adalah Tutor AI ahli " + mapel + " yang super sabar. Baca materi dari SEMUA foto halaman buku ini secara berurutan untuk siswa " + jenjang_kelas + " bernama " + nama + ".\n"
-                        "Keluarkan persis 3 bagian berikut dengan format pembatas yang ketat:\n\n"
-                        "===NASKAH_LAYAR===\n"
-                        "(Tulis penjelasan materi SANGAT DETAIL dengan menggabungkan informasi dari semua foto halaman. Jika ada 'Cara 1', 'Cara 2', jelaskan SEMUANYA beserta contoh perhitungan angkanya secara urut. "
-                        "FORMAT: Profesional layaknya materi pelajaran. Gunakan angka asli dan simbol matematika (misal: 35 x 2 = 70). Jangan dieja dengan huruf. Sapa " + nama + " di awal kalimat.)\n\n"
-                        "===NASKAH_SUARA===\n"
-                        "(Tulis versi lisan dari NASKAH_LAYAR di atas. Kalimatnya HARUS 100% sama dan sinkron dengan naskah layar, TETAPI semua angka dan simbol matematika WAJIB DIEJA dengan huruf (misal: 'tiga puluh lima dikali dua sama dengan tujuh puluh'). Ini agar mesin suara dapat membacanya dengan tepat dan tidak tersendat.)\n\n"
-                        "===KUIS===\n"
-                        "(Buatlah 3 soal pilihan ganda dari keseluruhan materi yang ada di foto. Wajib gunakan format ini per baris, dipisah dengan 3 garis lurus HANYA:)\n"
-                        "Pertanyaan 1?|||Opsi 1|||Opsi 2|||Opsi 3|||Teks Jawaban Benar\n"
-                        "Pertanyaan 2?|||Opsi 1|||Opsi 2|||Opsi 3|||Teks Jawaban Benar\n"
-                        "Pertanyaan 3?|||Opsi 1|||Opsi 2|||Opsi 3|||Teks Jawaban Benar\n"
-                        "(PENTING: Bagian akhir HANYA boleh berisi TEKS JAWABAN BENAR yang persis sama dengan isi salah satu opsi)"
-                    )
-                    
-                    # FITUR BARU: Menggabungkan prompt teks dengan seluruh daftar gambar sekaligus
-                    payload = [ux_bridge_prompt] + daftar_gambar
-                    
                     response = client_gemini.models.generate_content(
                         model='gemini-3.6-flash',
-                        contents=payload
+                        contents=payload_ai
                     )
                     full_text = response.text
                     
@@ -165,8 +181,6 @@ if btn_analisis:
                     else:
                         st.error(f"Gagal memproses materi: {e}")
                         break
-    else:
-        st.warning("Silakan unggah minimal satu foto buku dulu ya!")
 
 # --- MENAMPILKAN MODUL BELAJAR INTERAKTIF ---
 if st.session_state.berhasil_baca:
@@ -198,7 +212,7 @@ if st.session_state.berhasil_baca:
             
             status_jawaban = st.session_state.get(f"status_soal_{i}")
             if status_jawaban == "benar":
-                st.success("Tepat sekali! Hebat! ⭐")
+                st.success("Tepat sekali! Ini hadiah bintang untukmu! ⭐")
             elif status_jawaban == "kosong":
                 st.warning("Kamu belum memilih jawaban, klik salah satu bulatan dulu ya.")
             elif status_jawaban == "salah":
