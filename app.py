@@ -56,7 +56,7 @@ def buat_suara_google(teks, nama_file, nama_suara):
     
     audio_config = texttospeech.AudioConfig(
         audio_encoding=texttospeech.AudioEncoding.MP3,
-        speaking_rate=1.15,  # <-- DIPERCEPAT! Naik dari 0.9 menjadi 1.15 (Lebih cepat ~25%)
+        speaking_rate=1.15,  # <-- Suara cepat dan energik
         pitch=4.0            
     )
     
@@ -207,7 +207,7 @@ if st.session_state.berhasil_baca:
     with open(st.session_state.file_suara, "rb") as f:
         audio_b64 = base64.b64encode(f.read()).decode()
     
-    # HTML Kustom dengan Kalibrasi Sinkronisasi Kecepatan Baru
+    # HTML Kustom dengan Kalibrasi Sinkronisasi Kecepatan Teks SUPER CEPAT (Dipercepat 25% lagi)
     html_animasi = f"""
     <!DOCTYPE html>
     <html>
@@ -269,9 +269,11 @@ if st.session_state.berhasil_baca:
             
             audio.addEventListener('timeupdate', () => {{
                 if (audio.duration) {{
-                    // KALIBRASI BARU: Menyesuaikan kecepatan TTS yang dinaikkan 25%
-                    let adjustedTime = audio.currentTime + 0.4;
-                    let progress = (adjustedTime / audio.duration) * 1.05;
+                    // KALIBRASI SUPER CEPAT: Ditambah 25% lebih ngebut!
+                    // Dorongan awal dari 0.4 jadi 0.6 detik
+                    let adjustedTime = audio.currentTime + 0.6;
+                    // Pengali kelajuan dari 1.05 dinaikkan tajam ke 1.35
+                    let progress = (adjustedTime / audio.duration) * 1.35;
                     
                     if (progress > 1) progress = 1;
                     let targetChars = progress * totalChars;
