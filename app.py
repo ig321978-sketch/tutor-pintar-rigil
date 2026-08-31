@@ -1,43 +1,16 @@
 import streamlit as st
+import streamlit.components.v1 as components
 import re
 import time
 import json
+import base64
 from PIL import Image
 from google import genai
 from google.cloud import texttospeech
 from google.oauth2 import service_account
 
-# --- DESAIN UI / CSS CUSTOM UNTUK ANAK-ANAK ---
+# --- DESAIN UI / CSS CUSTOM STREAMLIT ---
 st.set_page_config(page_title="Tutor Pintar Rigil", page_icon="🎓", layout="centered")
-
-st.markdown("""
-<style>
-    /* Mengubah desain kotak materi agar terlihat seperti kartu belajar */
-    .materi-card {
-        background-color: #F4FBFF;
-        border-left: 6px solid #2AB3FF;
-        padding: 25px;
-        border-radius: 10px;
-        box-shadow: 2px 2px 10px rgba(0,0,0,0.05);
-        margin-bottom: 25px;
-    }
-    .materi-card h3 {
-        color: #0078D7;
-        font-weight: 800;
-    }
-    .materi-card p, .materi-card li {
-        font-size: 17px;
-        line-height: 1.7;
-        color: #333333;
-    }
-    .highlight {
-        background-color: #FFF2CD;
-        padding: 2px 6px;
-        border-radius: 5px;
-        font-weight: bold;
-    }
-</style>
-""", unsafe_allow_html=True)
 
 # --- INISIALISASI SESSION STATE ---
 if 'berhasil_baca' not in st.session_state:
@@ -89,7 +62,7 @@ def buat_suara_google(teks, nama_file, nama_suara):
 
 # --- ANTARMUKA PENGGUNA (UI) UTAMA ---
 st.title("🎓 Tutor Pintar Rigil")
-st.write("Asisten belajar cerdas dengan suara AI Google Premium. Belajar jadi lebih seru dan berwarna!")
+st.write("Asisten belajar cerdas dengan animasi teks dan suara AI Google Premium!")
 
 st.markdown("---")
 mode_belajar = st.radio("Pilih Sumber Materi:", ["📸 Unggah Foto Buku", "✍️ Ketik Judul Materi"], horizontal=True)
@@ -127,7 +100,7 @@ if btn_analisis:
             if key.startswith('status_soal_'):
                 del st.session_state[key]
         
-        with st.spinner("AI sedang meracik materi yang keren dan merekam suara..."):
+        with st.spinner("AI sedang meracik materi dan menyiapkan animasi sinkronisasi suara..."):
             
             if "SD" in jenjang_kelas:
                 karakter_suara = "id-ID-Wavenet-D" 
@@ -140,13 +113,16 @@ if btn_analisis:
             Keluarkan persis 3 bagian berikut dengan format pembatas yang ketat:
 
             ===NASKAH_LAYAR===
-            (Tulis penjelasan materi SANGAT DETAIL dan SUPER MENARIK. Gunakan BANYAK EMOJI yang relevan 🌟🚀💡📝. Gunakan format poin (bullet points) agar mudah dibaca. Cetak tebal konsep yang penting. Jika matematika, susun langkah perhitungannya ke bawah dengan rapi. Sapa {nama} dengan sangat antusias di kalimat pertama!)
+            (Tulis penjelasan materi SANGAT DETAIL dan MENARIK. Gunakan BANYAK EMOJI 🌟🚀💡. 
+            SYARAT MUTLAK: WAJIB GUNAKAN FORMAT HTML (Gunakan tag <h3>, <p>, <ul>, <li>, <strong>, <br>). 
+            DILARANG KERAS MENGGUNAKAN MARKDOWN (jangan pakai simbol bintang * atau pagar #). 
+            Susun dengan rapi. Sapa {nama} dengan sangat antusias di kalimat pertama!)
 
             ===NASKAH_SUARA===
             (Tulis versi lisan dari NASKAH_LAYAR di atas. Kalimatnya HARUS 100% sama maknanya, TETAPI DILARANG KERAS MENGGUNAKAN EMOJI SAMA SEKALI. Semua angka dan simbol matematika WAJIB DIEJA dengan huruf agar mesin suara membacanya dengan mulus.)
 
             ===KUIS===
-            (Buatlah 3 soal pilihan ganda. SYARAT WAJIB: Pertanyaan dan angka yang digunakan pada Kuis TIDAK BOLEH SAMA dengan contoh yang sudah dibahas di Naskah Layar. Gunakan angka/kasus BARU untuk menguji pemahaman siswa. Wajib gunakan format per baris, dipisah 3 garis lurus HANYA:)
+            (Buatlah 3 soal pilihan ganda. SYARAT WAJIB: Pertanyaan dan angka yang digunakan pada Kuis TIDAK BOLEH SAMA dengan contoh yang sudah dibahas di Naskah Layar. Wajib gunakan format per baris, dipisah 3 garis lurus HANYA:)
             Pertanyaan 1?|||Opsi 1|||Opsi 2|||Opsi 3|||Teks Jawaban Benar
             Pertanyaan 2?|||Opsi 1|||Opsi 2|||Opsi 3|||Teks Jawaban Benar
             Pertanyaan 3?|||Opsi 1|||Opsi 2|||Opsi 3|||Teks Jawaban Benar
@@ -213,19 +189,128 @@ if btn_analisis:
                         st.error(f"Gagal memproses materi: {e}")
                         break
 
-# --- MENAMPILKAN MODUL BELAJAR INTERAKTIF ---
+# --- MENAMPILKAN MODUL BELAJAR INTERAKTIF DENGAN ANIMASI SINKRON ---
 if st.session_state.berhasil_baca:
     st.markdown("---")
     st.markdown("## 🎧 Dengarkan & Baca Penjelasan Guru")
-    st.info("💡 Putar suara di bawah ini, lalu ikuti teksnya!")
     
-    st.audio(st.session_state.file_suara, format="audio/mp3")
+    # Mengubah file audio menjadi Base64 agar bisa dimasukkan ke dalam HTML
+    with open(st.session_state.file_suara, "rb") as f:
+        audio_b64 = base64.b64encode(f.read()).decode()
     
-    st.markdown(f"""
-    <div class="materi-card">
-        {st.session_state.naskah_layar}
-    </div>
-    """, unsafe_allow_html=True)
+    # KODE SULAP: HTML + CSS + JavaScript Animasi Sinkronisasi
+    html_animasi = f"""
+    <!DOCTYPE html>
+    <html>
+    <head>
+    <style>
+        body {{ 
+            margin: 0; padding: 10px; 
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+        }}
+        .materi-card {{
+            background-color: #F4FBFF;
+            border-left: 6px solid #2AB3FF;
+            padding: 25px;
+            border-radius: 10px;
+            box-shadow: 2px 2px 10px rgba(0,0,0,0.05);
+            margin-bottom: 25px;
+        }}
+        .materi-card h3 {{ color: #0078D7; font-weight: 800; margin-top: 0; }}
+        .materi-card p, .materi-card li {{ font-size: 17px; line-height: 1.7; color: #333333; }}
+        
+        /* State awal kata: Transparan (Menghilang) */
+        .word {{ 
+            opacity: 0; 
+            transition: opacity 0.3s ease-in-out; 
+        }}
+        /* State akhir kata: Muncul sempurna (Fade In ala PowerPoint) */
+        .word.active {{ 
+            opacity: 1; 
+        }}
+        
+        .player-box {{
+            text-align: center; margin-bottom: 20px; padding: 15px; 
+            background: #fff; border-radius: 10px; 
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }}
+    </style>
+    </head>
+    <body>
+        <div class="player-box">
+            <p style="margin-top:0; color:#FF5722; font-weight:bold; font-size: 18px;">
+                ▶️ Klik PLAY untuk memunculkan catatan ajaib! ✨
+            </p>
+            <audio id="audio-player" controls style="width: 100%; outline: none;">
+                <source src="data:audio/mp3;base64,{audio_b64}" type="audio/mp3">
+            </audio>
+        </div>
+        
+        <div class="materi-card" id="materi-content">
+            {st.session_state.naskah_layar}
+        </div>
+
+        <script>
+            const audio = document.getElementById('audio-player');
+            const content = document.getElementById('materi-content');
+            
+            // Fungsi untuk membungkus SETIAP KATA dengan tag span agar bisa dianimasikan
+            function wrapWords(element) {{
+                const children = Array.from(element.childNodes);
+                children.forEach(child => {{
+                    if (child.nodeType === Node.TEXT_NODE) {{
+                        const words = child.nodeValue.split(/(\\s+)/);
+                        const fragment = document.createDocumentFragment();
+                        let hasWords = false;
+                        
+                        words.forEach(word => {{
+                            if (word.trim().length > 0) {{
+                                const span = document.createElement('span');
+                                span.className = 'word';
+                                span.textContent = word;
+                                fragment.appendChild(span);
+                                hasWords = true;
+                            }} else {{
+                                fragment.appendChild(document.createTextNode(word));
+                            }}
+                        }});
+                        
+                        if (hasWords) {{
+                            element.replaceChild(fragment, child);
+                        }}
+                    }} else if (child.nodeType === Node.ELEMENT_NODE) {{
+                        wrapWords(child);
+                    }}
+                }});
+            }}
+            
+            // Eksekusi pembungkusan kata
+            wrapWords(content);
+            const allWords = document.querySelectorAll('.word');
+            
+            // Fungsi Sinkronisasi: Saat audio diputar, hitung persentase durasi 
+            // lalu munculkan jumlah kata yang sepadan dengan persentase tersebut
+            audio.addEventListener('timeupdate', () => {{
+                if (audio.duration) {{
+                    const progress = audio.currentTime / audio.duration;
+                    const wordsToShow = Math.floor(progress * allWords.length);
+                    
+                    allWords.forEach((word, index) => {{
+                        if (index < wordsToShow) {{
+                            word.classList.add('active');
+                        }} else {{
+                            word.classList.remove('active');
+                        }}
+                    }});
+                }}
+            }});
+        </script>
+    </body>
+    </html>
+    """
+    
+    # Menampilkan blok HTML Kustom di dalam Streamlit
+    components.html(html_animasi, height=750, scrolling=True)
     
     st.markdown("---")
     st.markdown(f"## 🏆 Latihan Soal untuk {nama}!")
