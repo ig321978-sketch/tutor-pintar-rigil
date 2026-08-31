@@ -23,6 +23,11 @@ if 'daftar_kuis' not in st.session_state:
     st.session_state.daftar_kuis = []
 if 'pesan_error_json' not in st.session_state:
     st.session_state.pesan_error_json = ""
+# Tambahan State untuk Q&A dan Karakter Suara
+if 'karakter_suara' not in st.session_state:
+    st.session_state.karakter_suara = "id-ID-Wavenet-A"
+if 'qa_history' not in st.session_state:
+    st.session_state.qa_history = []
 
 # --- KONFIGURASI KUNCI API & GOOGLE CLOUD ---
 try:
@@ -98,18 +103,21 @@ if btn_analisis:
             st.error(f"**Gagal membaca Kunci JSON Google!**")
             st.stop()
             
+        # Reset riwayat jika mencari materi baru
         for key in list(st.session_state.keys()):
             if key.startswith('status_soal_'):
                 del st.session_state[key]
+        st.session_state.qa_history = [] 
         
         with st.spinner("AI sedang meracik materi dan menyiapkan animasi sinkronisasi suara..."):
             
+            # Simpan karakter suara ke session_state agar bisa dipakai saat Q&A nanti
             if "SD" in jenjang_kelas:
-                karakter_suara = "id-ID-Wavenet-A" 
+                st.session_state.karakter_suara = "id-ID-Wavenet-A" 
             elif "SMP" in jenjang_kelas:
-                karakter_suara = "id-ID-Wavenet-D" 
+                st.session_state.karakter_suara = "id-ID-Wavenet-D" 
             else:
-                karakter_suara = "id-ID-Wavenet-B" 
+                st.session_state.karakter_suara = "id-ID-Wavenet-B" 
 
             instruksi_format = f"""
             Keluarkan persis 3 bagian berikut dengan format pembatas yang ketat:
@@ -162,7 +170,7 @@ if btn_analisis:
                         if match_s: 
                             naskah_suara = match_s.group(1).strip()
                             naskah_bersih = re.sub(r'[*#_`>-]', '', naskah_suara)
-                            buat_suara_google(naskah_bersih, st.session_state.file_suara, karakter_suara)
+                            buat_suara_google(naskah_bersih, st.session_state.file_suara, st.session_state.karakter_suara)
                     
                     if "===KUIS===" in full_text:
                         match_k = re.search(r'===KUIS===(.*)', full_text, re.DOTALL)
@@ -191,7 +199,7 @@ if btn_analisis:
                         st.error(f"Gagal memproses materi: {e}")
                         break
 
-# --- MENAMPILKAN MODUL BELAJAR INTERAKTIF DENGAN ANIMASI SINKRON ---
+# --- MENAMPILKAN MODUL BELAJAR INTERAKTIF ---
 if st.session_state.berhasil_baca:
     st.markdown("---")
     st.markdown("## 🎧 Dengarkan & Baca Penjelasan Guru")
@@ -204,34 +212,13 @@ if st.session_state.berhasil_baca:
     <html>
     <head>
     <style>
-        body {{ 
-            margin: 0; padding: 10px; 
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
-        }}
-        .materi-card {{
-            background-color: #F4FBFF;
-            border-left: 6px solid #2AB3FF;
-            padding: 25px;
-            border-radius: 10px;
-            box-shadow: 2px 2px 10px rgba(0,0,0,0.05);
-            margin-bottom: 25px;
-        }}
+        body {{ margin: 0; padding: 10px; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }}
+        .materi-card {{ background-color: #F4FBFF; border-left: 6px solid #2AB3FF; padding: 25px; border-radius: 10px; box-shadow: 2px 2px 10px rgba(0,0,0,0.05); margin-bottom: 25px; }}
         .materi-card h3 {{ color: #0078D7; font-weight: 800; margin-top: 0; }}
         .materi-card p, .materi-card li {{ font-size: 17px; line-height: 1.7; color: #333333; }}
-        
-        .word {{ 
-            opacity: 0; 
-            transition: opacity 0.15s ease-out; 
-        }}
-        .word.active {{ 
-            opacity: 1; 
-        }}
-        
-        .player-box {{
-            text-align: center; margin-bottom: 20px; padding: 15px; 
-            background: #fff; border-radius: 10px; 
-            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-        }}
+        .word {{ opacity: 0; transition: opacity 0.15s ease-out; }}
+        .word.active {{ opacity: 1; }}
+        .player-box {{ text-align: center; margin-bottom: 20px; padding: 15px; background: #fff; border-radius: 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }}
     </style>
     </head>
     <body>
@@ -243,16 +230,10 @@ if st.session_state.berhasil_baca:
                 <source src="data:audio/mp3;base64,{audio_b64}" type="audio/mp3">
             </audio>
         </div>
-        
-        <div class="materi-card" id="materi-content">
-            {st.session_state.naskah_layar}
-        </div>
-
+        <div class="materi-card" id="materi-content">{st.session_state.naskah_layar}</div>
         <script>
             const audio = document.getElementById('audio-player');
             const content = document.getElementById('materi-content');
-            
-            // Variabel untuk algoritma baru (berbasis panjang huruf)
             let totalChars = 0;
             const wordData = [];
             
@@ -263,7 +244,6 @@ if st.session_state.berhasil_baca:
                         const words = child.nodeValue.split(/(\\s+)/);
                         const fragment = document.createDocumentFragment();
                         let hasWords = false;
-                        
                         words.forEach(word => {{
                             if (word.trim().length > 0) {{
                                 const span = document.createElement('span');
@@ -271,39 +251,27 @@ if st.session_state.berhasil_baca:
                                 span.textContent = word;
                                 fragment.appendChild(span);
                                 hasWords = true;
-                                
-                                // ALGORITMA CERDAS: Hitung bobot per huruf, bukan per kata
                                 let charCount = word.trim().length;
                                 totalChars += charCount;
                                 wordData.push({{ element: span, chars: charCount }});
-                                
                             }} else {{
                                 fragment.appendChild(document.createTextNode(word));
                             }}
                         }});
-                        
-                        if (hasWords) {{
-                            element.replaceChild(fragment, child);
-                        }}
+                        if (hasWords) {{ element.replaceChild(fragment, child); }}
                     }} else if (child.nodeType === Node.ELEMENT_NODE) {{
                         wrapWords(child);
                     }}
                 }});
             }}
-            
             wrapWords(content);
             
             audio.addEventListener('timeupdate', () => {{
                 if (audio.duration) {{
-                    // Karena ini berdasarkan huruf, laju progress lebih stabil.
-                    // Tambahan 1.07 untuk memberi "curi start" sedikit agar mata siap membaca
                     let progress = (audio.currentTime / audio.duration) * 1.07;
                     if (progress > 1) progress = 1;
-                    
                     let targetChars = progress * totalChars;
                     let currentChars = 0;
-                    
-                    // Nyalakan kata hanya jika bobot hurufnya sudah tercapai
                     for (let i = 0; i < wordData.length; i++) {{
                         currentChars += wordData[i].chars;
                         if (currentChars <= targetChars) {{
@@ -318,9 +286,77 @@ if st.session_state.berhasil_baca:
     </body>
     </html>
     """
-    
     components.html(html_animasi, height=750, scrolling=True)
+
+    # --- SEGMEN BARU: SESI TANYA JAWAB (Q&A) TAK TERBATAS ---
+    st.markdown("---")
+    st.markdown(f"## 🙋‍♂️ Ada Pertanyaan, {nama}?")
+    st.info("💡 Belum paham? Ketik pertanyaanmu di bawah, Guru AI akan langsung menjawab dengan teks dan suara!")
+
+    # Menampilkan riwayat tanya jawab
+    for idx, qa in enumerate(st.session_state.qa_history):
+        with st.chat_message("user", avatar="👦"):
+            st.write(f"**{nama}:** {qa['tanya']}")
+        with st.chat_message("assistant", avatar="👩‍🏫"):
+            st.write(qa['jawab_teks'])
+            st.audio(qa['file_audio'], format="audio/mp3")
+
+    # Kolom input pertanyaan baru
+    pertanyaan_baru = st.text_input("Ketik pertanyaan barumu di sini:", placeholder="Misal: Bu Guru, apa itu...")
     
+    if st.button("Minta Jawaban Guru 🎙️"):
+        if pertanyaan_baru:
+            with st.spinner("Guru sedang memikirkan jawaban terbaik..."):
+                prompt_qa = f"""Kamu adalah Tutor AI ahli {mapel} yang super ramah dan sabar.
+                Konteks materi saat ini: "{st.session_state.naskah_layar}"
+                
+                Siswa bernama {nama} ({jenjang_kelas}) bertanya: "{pertanyaan_baru}"
+                
+                Keluarkan persis 2 bagian berikut:
+                ===TEKS===
+                (Jawab dengan singkat, jelas, dan sangat ramah untuk anak. Gunakan emoji yang sesuai 🌟💡)
+                ===SUARA===
+                (Versi lisan dari TEKS di atas. DILARANG KERAS MENGGUNAKAN EMOJI SAMA SEKALI. Angka dan simbol wajib dieja huruf)
+                """
+                
+                try:
+                    response_qa = client_gemini.models.generate_content(
+                        model='gemini-3.6-flash',
+                        contents=prompt_qa
+                    )
+                    
+                    full_qa_text = response_qa.text
+                    jawab_teks = ""
+                    jawab_suara = ""
+                    
+                    # Memecah respon AI
+                    match_t = re.search(r'===TEKS===(.*?)(?====SUARA===|$)', full_qa_text, re.DOTALL)
+                    if match_t: jawab_teks = match_t.group(1).strip()
+                    
+                    match_s = re.search(r'===SUARA===(.*)', full_qa_text, re.DOTALL)
+                    if match_s: 
+                        jawab_suara = match_s.group(1).strip()
+                        jawab_suara_bersih = re.sub(r'[*#_`>-]', '', jawab_suara)
+                        
+                        # Membuat file audio dinamis baru (nama file berdasarkan stempel waktu)
+                        nama_file_dinamis = f"audio_qa_{int(time.time())}.mp3"
+                        buat_suara_google(jawab_suara_bersih, nama_file_dinamis, st.session_state.karakter_suara)
+                        
+                        # Menyimpan ke memori riwayat
+                        st.session_state.qa_history.append({
+                            "tanya": pertanyaan_baru,
+                            "jawab_teks": jawab_teks,
+                            "file_audio": nama_file_dinamis
+                        })
+                        
+                        # Menyegarkan halaman agar riwayat baru langsung muncul
+                        st.rerun()
+                except Exception as e:
+                    st.error(f"Gagal membuat jawaban: {e}")
+        else:
+            st.warning("Eits, ketik dulu pertanyaannya ya sebelum menekan tombol!")
+
+    # --- SEGMEN KUIS ---
     st.markdown("---")
     st.markdown(f"## 🏆 Latihan Soal untuk {nama}!")
     
