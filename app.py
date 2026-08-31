@@ -41,16 +41,19 @@ except Exception as e:
     client_tts = None
     st.session_state.pesan_error_json = str(e)
 
-# --- FUNGSI PEMBUAT SUARA GOOGLE PREMIUM ---
+# --- FUNGSI PEMBUAT SUARA GOOGLE PREMIUM (VERSI CERIA) ---
 def buat_suara_google(teks, nama_file, nama_suara):
     if not client_tts:
         raise Exception("Kunci JSON belum siap!")
     
     synthesis_input = texttospeech.SynthesisInput(text=teks)
     voice = texttospeech.VoiceSelectionParams(language_code="id-ID", name=nama_suara)
+    
+    # RAHASIA SUARA CERIA: Memainkan Pitch dan Rate
     audio_config = texttospeech.AudioConfig(
         audio_encoding=texttospeech.AudioEncoding.MP3,
-        speaking_rate=0.75 
+        speaking_rate=0.9,   # Sedikit lebih cepat agar energik dan hidup
+        pitch=4.0            # Nada ditinggikan agar terdengar manis dan ramah anak
     )
     
     response = client_tts.synthesize_speech(
@@ -102,10 +105,11 @@ if btn_analisis:
         
         with st.spinner("AI sedang meracik materi dan menyiapkan animasi sinkronisasi suara..."):
             
+            # MEMILIH KARAKTER SUARA TERBAIK
             if "SD" in jenjang_kelas:
-                karakter_suara = "id-ID-Wavenet-D" 
+                karakter_suara = "id-ID-Wavenet-A" # Dipilih Wavenet-A karena tone aslinya paling cerah
             elif "SMP" in jenjang_kelas:
-                karakter_suara = "id-ID-Wavenet-A" 
+                karakter_suara = "id-ID-Wavenet-D" 
             else:
                 karakter_suara = "id-ID-Wavenet-B" 
 
@@ -194,11 +198,9 @@ if st.session_state.berhasil_baca:
     st.markdown("---")
     st.markdown("## 🎧 Dengarkan & Baca Penjelasan Guru")
     
-    # Mengubah file audio menjadi Base64 agar bisa dimasukkan ke dalam HTML
     with open(st.session_state.file_suara, "rb") as f:
         audio_b64 = base64.b64encode(f.read()).decode()
     
-    # KODE SULAP: HTML + CSS + JavaScript Animasi Sinkronisasi
     html_animasi = f"""
     <!DOCTYPE html>
     <html>
@@ -219,12 +221,10 @@ if st.session_state.berhasil_baca:
         .materi-card h3 {{ color: #0078D7; font-weight: 800; margin-top: 0; }}
         .materi-card p, .materi-card li {{ font-size: 17px; line-height: 1.7; color: #333333; }}
         
-        /* State awal kata: Transparan (Menghilang) */
         .word {{ 
             opacity: 0; 
-            transition: opacity 0.3s ease-in-out; 
+            transition: opacity 0.1s ease-out; 
         }}
-        /* State akhir kata: Muncul sempurna (Fade In ala PowerPoint) */
         .word.active {{ 
             opacity: 1; 
         }}
@@ -254,7 +254,6 @@ if st.session_state.berhasil_baca:
             const audio = document.getElementById('audio-player');
             const content = document.getElementById('materi-content');
             
-            // Fungsi untuk membungkus SETIAP KATA dengan tag span agar bisa dianimasikan
             function wrapWords(element) {{
                 const children = Array.from(element.childNodes);
                 children.forEach(child => {{
@@ -284,15 +283,16 @@ if st.session_state.berhasil_baca:
                 }});
             }}
             
-            // Eksekusi pembungkusan kata
             wrapWords(content);
             const allWords = document.querySelectorAll('.word');
             
-            // Fungsi Sinkronisasi: Saat audio diputar, hitung persentase durasi 
-            // lalu munculkan jumlah kata yang sepadan dengan persentase tersebut
             audio.addEventListener('timeupdate', () => {{
                 if (audio.duration) {{
-                    const progress = audio.currentTime / audio.duration;
+                    let adjustedTime = audio.currentTime + 0.5;
+                    let progress = (adjustedTime / audio.duration) * 1.05;
+                    
+                    if (progress > 1) progress = 1;
+                    
                     const wordsToShow = Math.floor(progress * allWords.length);
                     
                     allWords.forEach((word, index) => {{
@@ -309,7 +309,6 @@ if st.session_state.berhasil_baca:
     </html>
     """
     
-    # Menampilkan blok HTML Kustom di dalam Streamlit
     components.html(html_animasi, height=750, scrolling=True)
     
     st.markdown("---")
