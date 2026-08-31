@@ -146,7 +146,7 @@ if btn_analisis:
             (Tulis versi lisan dari NASKAH_LAYAR di atas. Kalimatnya HARUS 100% sama maknanya, TETAPI DILARANG KERAS MENGGUNAKAN EMOJI SAMA SEKALI. Semua angka dan simbol matematika WAJIB DIEJA dengan huruf agar mesin suara membacanya dengan mulus.)
 
             ===KUIS===
-            (Buatlah 3 soal pilihan ganda. Wajib gunakan format per baris, dipisah 3 garis lurus HANYA:)
+            (Buatlah 3 soal pilihan ganda. SYARAT WAJIB: Pertanyaan dan angka yang digunakan pada Kuis TIDAK BOLEH SAMA dengan contoh yang sudah dibahas di Naskah Layar. Gunakan angka/kasus BARU untuk menguji pemahaman siswa. Wajib gunakan format per baris, dipisah 3 garis lurus HANYA:)
             Pertanyaan 1?|||Opsi 1|||Opsi 2|||Opsi 3|||Teks Jawaban Benar
             Pertanyaan 2?|||Opsi 1|||Opsi 2|||Opsi 3|||Teks Jawaban Benar
             Pertanyaan 3?|||Opsi 1|||Opsi 2|||Opsi 3|||Teks Jawaban Benar
@@ -221,7 +221,6 @@ if st.session_state.berhasil_baca:
     
     st.audio(st.session_state.file_suara, format="audio/mp3")
     
-    # Membungkus naskah layar ke dalam div HTML dengan class "materi-card"
     st.markdown(f"""
     <div class="materi-card">
         {st.session_state.naskah_layar}
