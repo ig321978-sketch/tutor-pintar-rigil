@@ -286,12 +286,9 @@ if st.session_state.berhasil_baca:
             
             audio.addEventListener('timeupdate', () => {{
                 if (audio.duration) {{
-                    // ALGORITMA DIPERCEPAT 50%
-                    // Jeda curi start dinaikkan jadi 1.0 detik
-                    let adjustedTime = audio.currentTime + 1.0;
-                    
-                    // Kecepatan dorongan dinaikkan jadi 1.5x (dipercepat 50%)
-                    let progress = (adjustedTime / audio.duration) * 1.5;
+                    // ALGORITMA DIKALIBRASI (Diperlambat 25% dari versi sebelumnya)
+                    let adjustedTime = audio.currentTime + 0.8;
+                    let progress = (adjustedTime / audio.duration) * 1.15;
                     
                     if (progress > 1) progress = 1;
                     
