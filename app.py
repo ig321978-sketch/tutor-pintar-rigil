@@ -46,7 +46,7 @@ except Exception as e:
     client_tts = None
     st.session_state.pesan_error_json = str(e)
 
-# --- FUNGSI PEMBUAT SUARA GOOGLE PREMIUM (VERSI CERIA) ---
+# --- FUNGSI PEMBUAT SUARA GOOGLE PREMIUM (VERSI CEPAT & CERIA) ---
 def buat_suara_google(teks, nama_file, nama_suara):
     if not client_tts:
         raise Exception("Kunci JSON belum siap!")
@@ -56,7 +56,7 @@ def buat_suara_google(teks, nama_file, nama_suara):
     
     audio_config = texttospeech.AudioConfig(
         audio_encoding=texttospeech.AudioEncoding.MP3,
-        speaking_rate=0.9,   
+        speaking_rate=1.15,  # <-- DIPERCEPAT! Naik dari 0.9 menjadi 1.15 (Lebih cepat ~25%)
         pitch=4.0            
     )
     
@@ -207,6 +207,7 @@ if st.session_state.berhasil_baca:
     with open(st.session_state.file_suara, "rb") as f:
         audio_b64 = base64.b64encode(f.read()).decode()
     
+    # HTML Kustom dengan Kalibrasi Sinkronisasi Kecepatan Baru
     html_animasi = f"""
     <!DOCTYPE html>
     <html>
@@ -268,10 +269,14 @@ if st.session_state.berhasil_baca:
             
             audio.addEventListener('timeupdate', () => {{
                 if (audio.duration) {{
-                    let progress = (audio.currentTime / audio.duration) * 1.07;
+                    // KALIBRASI BARU: Menyesuaikan kecepatan TTS yang dinaikkan 25%
+                    let adjustedTime = audio.currentTime + 0.4;
+                    let progress = (adjustedTime / audio.duration) * 1.05;
+                    
                     if (progress > 1) progress = 1;
                     let targetChars = progress * totalChars;
                     let currentChars = 0;
+                    
                     for (let i = 0; i < wordData.length; i++) {{
                         currentChars += wordData[i].chars;
                         if (currentChars <= targetChars) {{
@@ -288,12 +293,11 @@ if st.session_state.berhasil_baca:
     """
     components.html(html_animasi, height=750, scrolling=True)
 
-    # --- SEGMEN BARU: SESI TANYA JAWAB (Q&A) TAK TERBATAS ---
+    # --- SEGMEN TANYA JAWAB (Q&A) TAK TERBATAS ---
     st.markdown("---")
     st.markdown(f"## 🙋‍♂️ Ada Pertanyaan, {nama}?")
     st.info("💡 Belum paham? Ketik pertanyaanmu di bawah, Guru AI akan langsung menjawab dengan teks dan suara!")
 
-    # Menampilkan riwayat tanya jawab
     for idx, qa in enumerate(st.session_state.qa_history):
         with st.chat_message("user", avatar="👦"):
             st.write(f"**{nama}:** {qa['tanya']}")
@@ -301,7 +305,6 @@ if st.session_state.berhasil_baca:
             st.write(qa['jawab_teks'])
             st.audio(qa['file_audio'], format="audio/mp3")
 
-    # Kolom input pertanyaan baru
     pertanyaan_baru = st.text_input("Ketik pertanyaan barumu di sini:", placeholder="Misal: Bu Guru, apa itu...")
     
     if st.button("Minta Jawaban Guru 🎙️"):
@@ -329,7 +332,6 @@ if st.session_state.berhasil_baca:
                     jawab_teks = ""
                     jawab_suara = ""
                     
-                    # Memecah respon AI
                     match_t = re.search(r'===TEKS===(.*?)(?====SUARA===|$)', full_qa_text, re.DOTALL)
                     if match_t: jawab_teks = match_t.group(1).strip()
                     
@@ -338,18 +340,15 @@ if st.session_state.berhasil_baca:
                         jawab_suara = match_s.group(1).strip()
                         jawab_suara_bersih = re.sub(r'[*#_`>-]', '', jawab_suara)
                         
-                        # Membuat file audio dinamis baru (nama file berdasarkan stempel waktu)
                         nama_file_dinamis = f"audio_qa_{int(time.time())}.mp3"
                         buat_suara_google(jawab_suara_bersih, nama_file_dinamis, st.session_state.karakter_suara)
                         
-                        # Menyimpan ke memori riwayat
                         st.session_state.qa_history.append({
                             "tanya": pertanyaan_baru,
                             "jawab_teks": jawab_teks,
                             "file_audio": nama_file_dinamis
                         })
                         
-                        # Menyegarkan halaman agar riwayat baru langsung muncul
                         st.rerun()
                 except Exception as e:
                     st.error(f"Gagal membuat jawaban: {e}")
