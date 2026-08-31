@@ -49,11 +49,10 @@ def buat_suara_google(teks, nama_file, nama_suara):
     synthesis_input = texttospeech.SynthesisInput(text=teks)
     voice = texttospeech.VoiceSelectionParams(language_code="id-ID", name=nama_suara)
     
-    # RAHASIA SUARA CERIA: Memainkan Pitch dan Rate
     audio_config = texttospeech.AudioConfig(
         audio_encoding=texttospeech.AudioEncoding.MP3,
-        speaking_rate=0.9,   # Sedikit lebih cepat agar energik dan hidup
-        pitch=4.0            # Nada ditinggikan agar terdengar manis dan ramah anak
+        speaking_rate=0.9,   
+        pitch=4.0            
     )
     
     response = client_tts.synthesize_speech(
@@ -105,9 +104,8 @@ if btn_analisis:
         
         with st.spinner("AI sedang meracik materi dan menyiapkan animasi sinkronisasi suara..."):
             
-            # MEMILIH KARAKTER SUARA TERBAIK
             if "SD" in jenjang_kelas:
-                karakter_suara = "id-ID-Wavenet-A" # Dipilih Wavenet-A karena tone aslinya paling cerah
+                karakter_suara = "id-ID-Wavenet-A" 
             elif "SMP" in jenjang_kelas:
                 karakter_suara = "id-ID-Wavenet-D" 
             else:
@@ -288,8 +286,12 @@ if st.session_state.berhasil_baca:
             
             audio.addEventListener('timeupdate', () => {{
                 if (audio.duration) {{
-                    let adjustedTime = audio.currentTime + 0.5;
-                    let progress = (adjustedTime / audio.duration) * 1.05;
+                    // ALGORITMA DIPERCEPAT 50%
+                    // Jeda curi start dinaikkan jadi 1.0 detik
+                    let adjustedTime = audio.currentTime + 1.0;
+                    
+                    // Kecepatan dorongan dinaikkan jadi 1.5x (dipercepat 50%)
+                    let progress = (adjustedTime / audio.duration) * 1.5;
                     
                     if (progress > 1) progress = 1;
                     
