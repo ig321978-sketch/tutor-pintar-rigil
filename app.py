@@ -7,6 +7,38 @@ from google import genai
 from google.cloud import texttospeech
 from google.oauth2 import service_account
 
+# --- DESAIN UI / CSS CUSTOM UNTUK ANAK-ANAK ---
+st.set_page_config(page_title="Tutor Pintar Rigil", page_icon="🎓", layout="centered")
+
+st.markdown("""
+<style>
+    /* Mengubah desain kotak materi agar terlihat seperti kartu belajar */
+    .materi-card {
+        background-color: #F4FBFF;
+        border-left: 6px solid #2AB3FF;
+        padding: 25px;
+        border-radius: 10px;
+        box-shadow: 2px 2px 10px rgba(0,0,0,0.05);
+        margin-bottom: 25px;
+    }
+    .materi-card h3 {
+        color: #0078D7;
+        font-weight: 800;
+    }
+    .materi-card p, .materi-card li {
+        font-size: 17px;
+        line-height: 1.7;
+        color: #333333;
+    }
+    .highlight {
+        background-color: #FFF2CD;
+        padding: 2px 6px;
+        border-radius: 5px;
+        font-weight: bold;
+    }
+</style>
+""", unsafe_allow_html=True)
+
 # --- INISIALISASI SESSION STATE ---
 if 'berhasil_baca' not in st.session_state:
     st.session_state.berhasil_baca = False
@@ -27,7 +59,6 @@ except Exception:
 
 client_gemini = genai.Client(api_key=API_KEY)
 
-# Blok Deteksi Error JSON
 try:
     gcp_json_str = st.secrets["GOOGLE_CREDENTIALS_JSON"]
     gcp_creds_dict = json.loads(gcp_json_str)
@@ -36,12 +67,8 @@ try:
 except Exception as e:
     client_tts = None
     st.session_state.pesan_error_json = str(e)
-    if "GOOGLE_CREDENTIALS_JSON" in str(e):
-         st.session_state.pesan_error_json = "Nama variabel 'GOOGLE_CREDENTIALS_JSON' tidak ditemukan di Secrets."
-    elif "Expecting value" in str(e):
-         st.session_state.pesan_error_json = "Format JSON berantakan. Pastikan Anda memakai tiga tanda kutip."
 
-# --- FUNGSI PEMBUAT SUARA GOOGLE PREMIUM (WAVENET) ---
+# --- FUNGSI PEMBUAT SUARA GOOGLE PREMIUM ---
 def buat_suara_google(teks, nama_file, nama_suara):
     if not client_tts:
         raise Exception("Kunci JSON belum siap!")
@@ -50,7 +77,7 @@ def buat_suara_google(teks, nama_file, nama_suara):
     voice = texttospeech.VoiceSelectionParams(language_code="id-ID", name=nama_suara)
     audio_config = texttospeech.AudioConfig(
         audio_encoding=texttospeech.AudioEncoding.MP3,
-        speaking_rate=0.75  # Kecepatan dilambatkan
+        speaking_rate=0.75 
     )
     
     response = client_tts.synthesize_speech(
@@ -61,16 +88,12 @@ def buat_suara_google(teks, nama_file, nama_suara):
         out.write(response.audio_content)
 
 # --- ANTARMUKA PENGGUNA (UI) UTAMA ---
-st.set_page_config(page_title="Tutor Pintar Rigil", page_icon="🎓", layout="centered")
-
 st.title("🎓 Tutor Pintar Rigil")
-st.write("Asisten belajar cerdas dengan suara AI Google Premium. Belajar dari buku atau cari materi baru!")
+st.write("Asisten belajar cerdas dengan suara AI Google Premium. Belajar jadi lebih seru dan berwarna!")
 
-# --- PEMILIHAN SUMBER MATERI ---
 st.markdown("---")
 mode_belajar = st.radio("Pilih Sumber Materi:", ["📸 Unggah Foto Buku", "✍️ Ketik Judul Materi"], horizontal=True)
 
-# --- FORMULIR DATA SISWA ---
 with st.form("user_form"):
     nama = st.text_input("Nama Siswa:", "Rigil")
     jenjang_kelas = st.selectbox("Jenjang & Kelas:", [
@@ -98,35 +121,32 @@ if btn_analisis:
     else:
         if not client_tts:
             st.error(f"**Gagal membaca Kunci JSON Google!**")
-            st.warning(f"Laporan Sistem: `{st.session_state.pesan_error_json}`")
-            st.info("Silakan cek kembali kotak Settings > Secrets di Streamlit Anda.")
             st.stop()
             
         for key in list(st.session_state.keys()):
             if key.startswith('status_soal_'):
                 del st.session_state[key]
         
-        with st.spinner("AI sedang menyusun materi, penjelasan detail, dan merekam suara Google..."):
+        with st.spinner("AI sedang meracik materi yang keren dan merekam suara..."):
             
-            # MENGGUNAKAN SUARA GOOGLE WAVENET (DEEPMIND)
             if "SD" in jenjang_kelas:
-                karakter_suara = "id-ID-Wavenet-D" # Suara Perempuan 1 (Ramah & Hangat)
+                karakter_suara = "id-ID-Wavenet-D" 
             elif "SMP" in jenjang_kelas:
-                karakter_suara = "id-ID-Wavenet-A" # Suara Perempuan 2 (Luwes & Bersahabat)
+                karakter_suara = "id-ID-Wavenet-A" 
             else:
-                karakter_suara = "id-ID-Wavenet-B" # Suara Laki-laki (Berwibawa)
+                karakter_suara = "id-ID-Wavenet-B" 
 
             instruksi_format = f"""
             Keluarkan persis 3 bagian berikut dengan format pembatas yang ketat:
 
             ===NASKAH_LAYAR===
-            (Tulis penjelasan materi SANGAT DETAIL. Jika itu matematika, berikan contoh perhitungan angkanya secara urut. FORMAT: Profesional layaknya materi pelajaran. Gunakan angka asli dan simbol matematika. Sapa {nama} di awal kalimat.)
+            (Tulis penjelasan materi SANGAT DETAIL dan SUPER MENARIK. Gunakan BANYAK EMOJI yang relevan 🌟🚀💡📝. Gunakan format poin (bullet points) agar mudah dibaca. Cetak tebal konsep yang penting. Jika matematika, susun langkah perhitungannya ke bawah dengan rapi. Sapa {nama} dengan sangat antusias di kalimat pertama!)
 
             ===NASKAH_SUARA===
-            (Tulis versi lisan dari NASKAH_LAYAR di atas. Kalimatnya HARUS 100% sama dan sinkron dengan naskah layar, TETAPI semua angka dan simbol matematika WAJIB DIEJA dengan huruf. Ini agar mesin suara dapat membacanya dengan tepat dan tidak tersendat.)
+            (Tulis versi lisan dari NASKAH_LAYAR di atas. Kalimatnya HARUS 100% sama maknanya, TETAPI DILARANG KERAS MENGGUNAKAN EMOJI SAMA SEKALI. Semua angka dan simbol matematika WAJIB DIEJA dengan huruf agar mesin suara membacanya dengan mulus.)
 
             ===KUIS===
-            (Buatlah 3 soal pilihan ganda dari materi tersebut. Wajib gunakan format ini per baris, dipisah dengan 3 garis lurus HANYA:)
+            (Buatlah 3 soal pilihan ganda. Wajib gunakan format per baris, dipisah 3 garis lurus HANYA:)
             Pertanyaan 1?|||Opsi 1|||Opsi 2|||Opsi 3|||Teks Jawaban Benar
             Pertanyaan 2?|||Opsi 1|||Opsi 2|||Opsi 3|||Teks Jawaban Benar
             Pertanyaan 3?|||Opsi 1|||Opsi 2|||Opsi 3|||Teks Jawaban Benar
@@ -140,7 +160,7 @@ if btn_analisis:
                 for i, img in enumerate(daftar_gambar):
                     kolom_gambar[i % len(kolom_gambar)].image(img, use_container_width=True)
                 
-                konteks = f"Kamu adalah Tutor AI ahli {mapel} yang super sabar. Baca materi dari SEMUA foto halaman buku terlampir ini secara berurutan untuk siswa {jenjang_kelas} bernama {nama}."
+                konteks = f"Kamu adalah Tutor AI ahli {mapel} yang super sabar. Baca materi dari foto halaman buku terlampir untuk siswa {jenjang_kelas} bernama {nama}."
                 payload_ai = [konteks + "\n\n" + instruksi_format] + daftar_gambar
             else:
                 konteks = f"Kamu adalah Tutor AI ahli {mapel} yang super sabar. Susun materi pembelajaran yang detail tentang topik: '{judul_materi}'. Materi ditujukan untuk siswa {jenjang_kelas} bernama {nama}."
@@ -197,10 +217,16 @@ if btn_analisis:
 if st.session_state.berhasil_baca:
     st.markdown("---")
     st.markdown("## 🎧 Dengarkan & Baca Penjelasan Guru")
-    st.info("💡 Putar suara di bawah ini, lalu ikuti teksnya. Suara AI Google akan membacakan teks ini dengan detail!")
+    st.info("💡 Putar suara di bawah ini, lalu ikuti teksnya!")
     
     st.audio(st.session_state.file_suara, format="audio/mp3")
-    st.markdown(st.session_state.naskah_layar)
+    
+    # Membungkus naskah layar ke dalam div HTML dengan class "materi-card"
+    st.markdown(f"""
+    <div class="materi-card">
+        {st.session_state.naskah_layar}
+    </div>
+    """, unsafe_allow_html=True)
     
     st.markdown("---")
     st.markdown(f"## 🏆 Latihan Soal untuk {nama}!")
