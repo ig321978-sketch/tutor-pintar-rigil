@@ -286,9 +286,9 @@ if st.session_state.berhasil_baca:
             
             audio.addEventListener('timeupdate', () => {{
                 if (audio.duration) {{
-                    // ALGORITMA DIKALIBRASI (Diperlambat 25% dari versi sebelumnya)
-                    let adjustedTime = audio.currentTime + 0.8;
-                    let progress = (adjustedTime / audio.duration) * 1.15;
+                    // ALGORITMA DIKALIBRASI ULANG (+25% DARI VERSI SEBELUMNYA)
+                    let adjustedTime = audio.currentTime + 0.9;
+                    let progress = (adjustedTime / audio.duration) * 1.4;
                     
                     if (progress > 1) progress = 1;
                     
