@@ -221,7 +221,7 @@ if st.session_state.berhasil_baca:
         
         .word {{ 
             opacity: 0; 
-            transition: opacity 0.1s ease-out; 
+            transition: opacity 0.15s ease-out; 
         }}
         .word.active {{ 
             opacity: 1; 
@@ -252,6 +252,10 @@ if st.session_state.berhasil_baca:
             const audio = document.getElementById('audio-player');
             const content = document.getElementById('materi-content');
             
+            // Variabel untuk algoritma baru (berbasis panjang huruf)
+            let totalChars = 0;
+            const wordData = [];
+            
             function wrapWords(element) {{
                 const children = Array.from(element.childNodes);
                 children.forEach(child => {{
@@ -267,6 +271,12 @@ if st.session_state.berhasil_baca:
                                 span.textContent = word;
                                 fragment.appendChild(span);
                                 hasWords = true;
+                                
+                                // ALGORITMA CERDAS: Hitung bobot per huruf, bukan per kata
+                                let charCount = word.trim().length;
+                                totalChars += charCount;
+                                wordData.push({{ element: span, chars: charCount }});
+                                
                             }} else {{
                                 fragment.appendChild(document.createTextNode(word));
                             }}
@@ -282,25 +292,26 @@ if st.session_state.berhasil_baca:
             }}
             
             wrapWords(content);
-            const allWords = document.querySelectorAll('.word');
             
             audio.addEventListener('timeupdate', () => {{
                 if (audio.duration) {{
-                    // ALGORITMA DIKALIBRASI ULANG (+25% DARI VERSI SEBELUMNYA)
-                    let adjustedTime = audio.currentTime + 0.9;
-                    let progress = (adjustedTime / audio.duration) * 1.4;
-                    
+                    // Karena ini berdasarkan huruf, laju progress lebih stabil.
+                    // Tambahan 1.07 untuk memberi "curi start" sedikit agar mata siap membaca
+                    let progress = (audio.currentTime / audio.duration) * 1.07;
                     if (progress > 1) progress = 1;
                     
-                    const wordsToShow = Math.floor(progress * allWords.length);
+                    let targetChars = progress * totalChars;
+                    let currentChars = 0;
                     
-                    allWords.forEach((word, index) => {{
-                        if (index < wordsToShow) {{
-                            word.classList.add('active');
+                    // Nyalakan kata hanya jika bobot hurufnya sudah tercapai
+                    for (let i = 0; i < wordData.length; i++) {{
+                        currentChars += wordData[i].chars;
+                        if (currentChars <= targetChars) {{
+                            wordData[i].element.classList.add('active');
                         }} else {{
-                            word.classList.remove('active');
+                            wordData[i].element.classList.remove('active');
                         }}
-                    }});
+                    }}
                 }}
             }});
         </script>
