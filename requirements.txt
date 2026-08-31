@@ -1,4 +1,4 @@
 streamlit
 pillow
 google-genai
-openai
+google-cloud-texttospeech
