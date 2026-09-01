@@ -50,11 +50,19 @@ if 'tracker_penguasaan' not in st.session_state: st.session_state.tracker_pengua
 if 'sertifikat_lulus' not in st.session_state: st.session_state.sertifikat_lulus = [] 
 if 'rapor_ai' not in st.session_state: st.session_state.rapor_ai = ""
 
-# Dummy Papan Peringkat
+# Dummy Data Papan Peringkat
 if 'leaderboard' not in st.session_state:
     st.session_state.leaderboard = [
         {"Nama": "Budi (SD Jkt)", "Saldo": 4500}, {"Nama": "Siti (SD Bdg)", "Saldo": 3200},
         {"Nama": "Arif (SD Sby)", "Saldo": 2800}, {"Nama": "Nanda (SD Mdn)", "Saldo": 1500}
+    ]
+
+# Dummy Data Histori Belajar untuk Dashboard Orang Tua
+if 'histori_belajar' not in st.session_state:
+    st.session_state.histori_belajar = [
+        {"tanggal": "28 Agustus 2026", "mapel": "IPA (Sains)", "bab": "Tata Surya", "skor": 45, "status": "Kurang Fokus"},
+        {"tanggal": "30 Agustus 2026", "mapel": "Matematika", "bab": "Perkalian Dasar", "skor": 65, "status": "Sedang Berkembang"},
+        {"tanggal": "1 September 2026", "mapel": "Matematika", "bab": "Transformasi Geometri", "skor": 95, "status": "Lulus Level Boss"}
     ]
 
 # --- KONFIGURASI API ---
@@ -98,7 +106,6 @@ st.markdown(f"""
 </div>
 """, unsafe_allow_html=True)
 
-# Logika Pembelian Nyawa
 if st.session_state.nyawa <= 0:
     st.error("💔 Yaah! Nyawa belajarmu habis karena terlalu banyak menjawab salah.")
     if st.button("💊 Beli 3 Nyawa (Harga: 50 $IGIL)"):
@@ -110,13 +117,13 @@ if st.session_state.nyawa <= 0:
             st.rerun()
         else:
             st.warning("Saldo $IGIL mu tidak cukup. Kembalilah besok!")
-    st.stop() # Menghentikan aplikasi jika nyawa habis
+    st.stop() 
 
 # --- NAVIGASI TAB ---
 tab_belajar, tab_leaderboard, tab_ortu = st.tabs(["📚 Ruang Belajar", "🏆 Papan Peringkat", "👨‍👩‍👧 Dashboard Orang Tua"])
 
 # ==========================================
-# TAB 1: RUANG BELAJAR (APLIKASI UTAMA)
+# TAB 1: RUANG BELAJAR
 # ==========================================
 with tab_belajar:
     if st.button("🎁 Tukar Saldo $IGIL Menjadi Beasiswa Instan", use_container_width=True):
@@ -271,6 +278,12 @@ with tab_belajar:
                     if st.button(f"Cek Jawaban Soal {i+1}", key=f"btn_cek_{i}"):
                         if jawaban_user == q['kunci']:
                             st.session_state[f"status_soal_{i}"] = "benar"
+                            
+                            # SIMULASI PENCATATAN KE DASHBOARD ORTU
+                            data_log_baru = {"tanggal": "1 September 2026", "mapel": mapel, "bab": st.session_state.tag_materi.title(), "skor": 100, "status": "Berhasil"}
+                            if data_log_baru not in st.session_state.histori_belajar:
+                                st.session_state.histori_belajar.append(data_log_baru)
+                                
                             if not st.session_state.get(f"koin_diberikan_{i}", False):
                                 st.session_state[f"koin_diberikan_{i}"] = True
                                 if not is_lulus:
@@ -350,25 +363,16 @@ with tab_belajar:
 # TAB 2: PAPAN PERINGKAT (LEADERBOARD)
 # ==========================================
 with tab_leaderboard:
-    st.markdown("### 🏆 Papan Peringkat Nasional (Top Pelajar $IGIL)")
-    st.write("Bersainglah dengan siswa dari seluruh Indonesia untuk mengumpulkan Beasiswa terbanyak!")
-    
-    # Gabungkan data dummy dengan data pemain saat ini
+    st.markdown("### 🏆 Papan Peringkat Nasional")
     semua_pemain = st.session_state.leaderboard.copy()
     semua_pemain.append({"Nama": f"{nama} (Kamu)", "Saldo": st.session_state.saldo_igil})
-    # Urutkan berdasarkan Saldo terbesar
     semua_pemain = sorted(semua_pemain, key=lambda x: x['Saldo'], reverse=True)
     
     html_leaderboard = "<div style='background-color:#FAFAFA; padding:20px; border-radius:10px;'>"
     for idx, p in enumerate(semua_pemain):
         medali = "🥇" if idx == 0 else "🥈" if idx == 1 else "🥉" if idx == 2 else "🎓"
         warna_bg = "#E3F2FD" if "(Kamu)" in p['Nama'] else "#FFFFFF"
-        html_leaderboard += f"""
-        <div style='display:flex; justify-content:space-between; padding:15px; margin-bottom:10px; background-color:{warna_bg}; border-radius:8px; border:1px solid #E0E0E0;'>
-            <div style='font-size:18px;'><b>{medali} Peringkat {idx+1}</b> - {p['Nama']}</div>
-            <div style='font-size:18px; font-weight:bold; color:#00838F;'>{p['Saldo']} $IGIL</div>
-        </div>
-        """
+        html_leaderboard += f"<div style='display:flex; justify-content:space-between; padding:15px; margin-bottom:10px; background-color:{warna_bg}; border-radius:8px; border:1px solid #E0E0E0;'><div style='font-size:18px;'><b>{medali} Peringkat {idx+1}</b> - {p['Nama']}</div><div style='font-size:18px; font-weight:bold; color:#00838F;'>{p['Saldo']} $IGIL</div></div>"
     html_leaderboard += "</div>"
     st.markdown(html_leaderboard, unsafe_allow_html=True)
 
@@ -377,39 +381,76 @@ with tab_leaderboard:
 # ==========================================
 with tab_ortu:
     st.markdown("### 👨‍👩‍👧 Panel Pantau Orang Tua")
-    st.info("Ruang khusus bagi Ayah/Bunda untuk memantau perkembangan belajar, mencetak rapor AI, dan mengatur notifikasi.")
     
-    col_stat1, col_stat2, col_stat3 = st.columns(3)
-    with col_stat1: st.metric("Total Beasiswa Ditambang", f"{st.session_state.saldo_igil} $IGIL")
-    with col_stat2: st.metric("Sertifikat Dikuasai", len(st.session_state.sertifikat_lulus))
-    with col_stat3: st.metric("Kesehatan Belajar (Nyawa)", f"{st.session_state.nyawa} / 3")
+    # --- 1. RINGKASAN HARI INI ---
+    aktivitas_hari_ini = [log for log in st.session_state.histori_belajar if log['tanggal'] == "1 September 2026"]
+    
+    st.markdown("#### 📅 Aktivitas Hari Ini (1 September 2026)")
+    if aktivitas_hari_ini:
+        st.success(f"✅ Anak Anda, **{nama}**, SUDAH belajar hari ini!")
+        for aksi in aktivitas_hari_ini:
+            st.write(f"- Mempelajari **{aksi['mapel']}** (Bab: {aksi['bab']}) dengan skor **{aksi['skor']}** ({aksi['status']})")
+    else:
+        st.error(f"❌ Anak Anda, **{nama}**, BELUM membuka materi pelajaran apa pun hari ini.")
+        
+    st.markdown("<br>", unsafe_allow_html=True)
+    
+    # --- 2. GRAFIK RAPOR VISUAL ---
+    st.markdown("#### 📊 Rapor Akademik AI")
+    if len(st.session_state.histori_belajar) > 0:
+        rata_rata = sum([item['skor'] for item in st.session_state.histori_belajar]) / len(st.session_state.histori_belajar)
+        rata_rata = round(rata_rata)
+        
+        if rata_rata <= 50:
+            warna_grafik = "#F44336" # Merah
+            warna_bg = "#FFEBEE"
+            status_rapor = "🔴 PERLU PERHATIAN EKSTRA"
+        elif rata_rata <= 80:
+            warna_grafik = "#FFC107" # Kuning
+            warna_bg = "#FFF8E1"
+            status_rapor = "🟡 CUKUP BAIK"
+        else:
+            warna_grafik = "#4CAF50" # Hijau
+            warna_bg = "#E8F5E9"
+            status_rapor = "🟢 SANGAT MEMUASKAN"
+            
+        html_rapor = f"""
+        <div style="background-color: {warna_bg}; padding: 25px; border-radius: 12px; border: 1px solid {warna_grafik}; text-align: center; margin-bottom: 25px;">
+            <h3 style="margin-top: 0; color: #333;">Nilai Rata-Rata Keseluruhan</h3>
+            <div style="width: 100%; background-color: #E0E0E0; border-radius: 20px; height: 40px; margin: 15px 0; overflow: hidden; box-shadow: inset 0 2px 4px rgba(0,0,0,0.1);">
+                <div style="width: {rata_rata}%; background-color: {warna_grafik}; height: 40px; border-radius: 20px 0 0 20px; text-align: right; padding-right: 15px; color: white; font-weight: bold; font-size: 20px; line-height: 40px; transition: width 1s ease-in-out;">
+                    {rata_rata}%
+                </div>
+            </div>
+            <h4 style="color: {warna_grafik}; margin-bottom: 0; font-size: 22px;">{status_rapor}</h4>
+        </div>
+        """
+        components.html(html_rapor, height=190)
+    else:
+        st.info("Belum ada data nilai yang cukup untuk menghasilkan Grafik Rapor.")
+
+    # --- 3. HISTORI BELAJAR LENGKAP ---
+    st.markdown("#### 📚 Riwayat Historis Belajar")
+    st.dataframe(
+        st.session_state.histori_belajar,
+        column_config={
+            "tanggal": "Tanggal",
+            "mapel": "Mata Pelajaran",
+            "bab": "Topik/Bab",
+            "skor": st.column_config.NumberColumn("Skor", format="%d/100"),
+            "status": "Hasil Akhir"
+        },
+        use_container_width=True,
+        hide_index=True
+    )
     
     st.markdown("---")
-    st.markdown("#### 🧠 Rapor Diagnostik Kecerdasan Buatan")
-    if st.button("Buat Rapor Analisis AI Sekarang", use_container_width=True):
-        with st.spinner("AI sedang menganalisis kelemahan dan kekuatan anak Anda berdasarkan histori kuis..."):
-            histori_kuis = st.session_state.tracker_penguasaan
-            prompt_rapor = f"""
-            Buatkan 1 paragraf singkat laporan diagnostik pendidikan untuk orang tua siswa bernama {nama}.
-            Data progres penguasaannya: {histori_kuis}.
-            Sisa nyawa: {st.session_state.nyawa}/3.
-            Berikan pujian dan saran spesifik bagian mana yang harus diperbaiki. Gunakan bahasa Indonesia yang formal dan memotivasi orang tua.
-            """
-            try:
-                resp_rapor = client_gemini.models.generate_content(model='gemini-3.6-flash', contents=[prompt_rapor])
-                st.session_state.rapor_ai = resp_rapor.text
-            except:
-                st.error("Gagal membuat rapor.")
-                
-    if st.session_state.rapor_ai:
-        st.markdown(f"<div style='background-color:#FFF8E1; padding:20px; border-left:5px solid #FFC107; border-radius:8px;'><b>📝 Laporan AI Tutor:</b><br>{st.session_state.rapor_ai}</div>", unsafe_allow_html=True)
-        
-        st.markdown("<br>#### 📲 Integrasi Notifikasi Handphone", unsafe_allow_html=True)
-        no_tele = st.text_input("ID/Nomor Telegram Ayah/Bunda:", placeholder="@username_ayah atau 08123456...")
-        if st.button("Kirim Rapor Ini ke Telegram"):
-            if no_tele:
-                with st.spinner("Menghubungkan ke API Telegram Bot..."):
-                    time.sleep(1.5) # Simulasi delay pengiriman jaringan
-                    st.success(f"✅ Rapor berhasil dikirim ke perangkat Telegram: {no_tele}!")
-            else:
-                st.warning("Masukkan ID Telegram terlebih dahulu!")
+    st.markdown("#### 📲 Integrasi Notifikasi Handphone")
+    no_tele = st.text_input("ID/Nomor Telegram Ayah/Bunda:", placeholder="@username_ayah atau 08123456...")
+    if st.button("Kirim Rapor Ini ke Telegram", use_container_width=True):
+        if no_tele:
+            with st.spinner("Menghubungkan ke API Telegram Bot..."):
+                time.sleep(1.5)
+                st.success(f"✅ Rapor interaktif berhasil dikirim ke perangkat Telegram: {no_tele}!")
+        else:
+            st.warning("Masukkan ID Telegram terlebih dahulu!")
