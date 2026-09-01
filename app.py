@@ -139,9 +139,28 @@ st.markdown("---")
 mode_belajar = st.radio("Pilih Sumber Materi:", ["📸 Unggah Foto Buku", "✍️ Pilih/Ketik Topik Materi"], horizontal=True)
 
 col_siswa, col_kelas, col_mapel = st.columns(3)
-with col_siswa: nama = st.text_input("Nama Siswa:", "Rigil")
-with col_kelas: jenjang_kelas = st.selectbox("Jenjang & Kelas:", ["SD - Kelas 1", "SD - Kelas 2", "SD - Kelas 3", "SD - Kelas 4", "SD - Kelas 5", "SD - Kelas 6", "SMP - Kelas 7", "SMP - Kelas 8", "SMP - Kelas 9", "SMA - Kelas 10", "SMA - Kelas 11", "SMA - Kelas 12"], index=2)
-with col_mapel: mapel = st.text_input("Mata Pelajaran:", "Matematika")
+with col_siswa: 
+    nama = st.text_input("Nama Siswa:", "Rigil")
+with col_kelas: 
+    jenjang_kelas = st.selectbox("Jenjang & Kelas:", [
+        "SD - Kelas 1", "SD - Kelas 2", "SD - Kelas 3", "SD - Kelas 4", "SD - Kelas 5", "SD - Kelas 6", 
+        "SMP - Kelas 7", "SMP - Kelas 8", "SMP - Kelas 9", 
+        "SMA - Kelas 10", "SMA - Kelas 11", "SMA - Kelas 12"
+    ], index=2)
+with col_mapel: 
+    # PERUBAHAN UI: Mata Pelajaran menjadi Drop-down
+    pilihan_mapel = st.selectbox("Mata Pelajaran:", [
+        "Matematika", "Bahasa Indonesia", "Bahasa Inggris", 
+        "IPA (Sains)", "IPS (Sosial)", "Pendidikan Pancasila", 
+        "Fisika", "Kimia", "Biologi", "Ekonomi", "Geografi", "Sejarah",
+        "Seni Budaya", "PJOK (Olahraga)", "TIK / Komputer", "Agama", 
+        "LAINNYA (Ketik Manual)"
+    ])
+    
+    if pilihan_mapel == "LAINNYA (Ketik Manual)":
+        mapel = st.text_input("Ketik Mata Pelajaran:", placeholder="Contoh: Muatan Lokal")
+    else:
+        mapel = pilihan_mapel
 
 if mode_belajar == "📸 Unggah Foto Buku":
     uploaded_files = st.file_uploader("Foto Halaman Buku Pelajaran (Bisa lebih dari 1):", type=["jpg", "jpeg", "png"], accept_multiple_files=True)
@@ -167,7 +186,6 @@ daftar_guru = DATA_GURU[jenjang_inti]
 nama_guru_pilihan = st.radio("Daftar Guru Tersedia:", [g['nama'] for g in daftar_guru], horizontal=True, label_visibility="collapsed")
 guru_terpilih = next(g for g in daftar_guru if g['nama'] == nama_guru_pilihan)
 
-# MEMPERBAIKI TEKS TOMBOL MENJADI LEBIH BERSIH
 if st.button("🔊 Putar Suara Perkenalan"):
     if client_tts:
         buat_suara_google(guru_terpilih['pesan'], "test_suara.mp3", guru_terpilih['voice'], guru_terpilih['pitch'], guru_terpilih['rate'])
@@ -178,7 +196,9 @@ btn_analisis = st.button("Mulai Belajar! 🚀", use_container_width=True, type="
 
 # --- PROSES ANALISIS AI ---
 if btn_analisis:
-    if mode_belajar == "📸 Unggah Foto Buku" and not uploaded_files:
+    if not mapel:
+        st.warning("Silakan isi Mata Pelajaran terlebih dahulu!")
+    elif mode_belajar == "📸 Unggah Foto Buku" and not uploaded_files:
         st.warning("Silakan unggah minimal satu foto buku dulu ya!")
     elif mode_belajar == "✍️ Pilih/Ketik Topik Materi" and not judul_materi:
         st.warning("Silakan pilih Bab atau ketik materi yang ingin dipelajari!")
@@ -190,7 +210,6 @@ if btn_analisis:
                 del st.session_state[key]
         st.session_state.qa_history = [] 
         
-        # Ekstrak nama asli guru tanpa karakter/sifat di dalam kurung
         nama_asli_guru = st.session_state.guru_aktif['nama'].split('(')[0].strip()
         
         with st.spinner(f"{nama_asli_guru} sedang membaca kurikulum & menyiapkan rumus tanpa kode..."):
@@ -278,7 +297,6 @@ if btn_analisis:
 if st.session_state.berhasil_baca:
     st.markdown("---")
     
-    # Ekstrak nama asli guru untuk tampilan judul
     nama_asli_guru = st.session_state.guru_aktif['nama'].split('(')[0].strip()
     
     KUNCI_PELACAKAN = f"{jenjang_kelas}_{mapel}_{st.session_state.tag_materi}"
@@ -295,7 +313,7 @@ if st.session_state.berhasil_baca:
                 <p style="font-size: 18px; color: #555;">Telah berhasil menguasai dan menaklukkan {BATAS_MASTER} variasi Tantangan Ujian Nasional pada sub-bab:</p>
                 <h3 style="color: #0078D7; margin: 5px 0;">{mapel} - {st.session_state.tag_materi}</h3>
                 <br>
-                <span style="background-color: #FFEB3B; padding: 5px 15px; border-radius: 20px; font-weight: bold; font-size: 14px;">🔒 Penambangan Koin Untuk Materi Ini Telah Dikunci</span>
+                <span style="background-color: #FFEB3B; padding: 5px 15px; border-radius: 20px; font-weight: bold; font-size: 14px;">🔒 Penambangan Beasiswa Untuk Materi Ini Telah Dikunci</span>
             </div>
         </div>
         """, unsafe_allow_html=True)
@@ -307,7 +325,6 @@ if st.session_state.berhasil_baca:
         </div>
         """, unsafe_allow_html=True)
 
-    # MEMPERBAIKI JUDUL AUDIO MENJADI NAMA UTUH GURU
     st.markdown(f"## 🎧 Dengarkan Penjelasan {nama_asli_guru}")
     with open(st.session_state.file_suara, "rb") as f:
         audio_b64 = base64.b64encode(f.read()).decode()
