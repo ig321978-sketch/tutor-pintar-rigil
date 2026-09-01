@@ -10,12 +10,13 @@ from google.genai import types
 from google.cloud import texttospeech
 from google.oauth2 import service_account
 
-# --- KONFIGURASI BATAS MASTER (ANTI-FARMING LENCANA) ---
+# --- KONFIGURASI BATAS MASTER (ANTI-FARMING) ---
 BATAS_MASTER = 5 
 
 # --- DESAIN UI / CSS CUSTOM STREAMLIT ---
 st.set_page_config(page_title="$IGIL - Learn to Earn", page_icon="🎓", layout="centered")
 
+# --- DATABASE KARAKTER GURU ---
 DATA_GURU = {
     "SD": [
         {"nama": "Bu Nisa (Ceria & Lembut)", "voice": "id-ID-Wavenet-A", "pitch": 4.0, "rate": 0.9, "pesan": "Halo anak hebat! Aku Bu Nisa. Mari kita belajar sambil bermain dan bersenang-senang ya!"},
@@ -34,10 +35,8 @@ DATA_GURU = {
 # --- INISIALISASI SESSION STATE ---
 if 'berhasil_baca' not in st.session_state:
     st.session_state.berhasil_baca = False
-if 'sub_topik_aktif' not in st.session_state:
-    st.session_state.sub_topik_aktif = ""
-if 'kunci_aktif' not in st.session_state:
-    st.session_state.kunci_aktif = ""
+if 'tag_materi' not in st.session_state:
+    st.session_state.tag_materi = ""
 if 'naskah_layar' not in st.session_state:
     st.session_state.naskah_layar = ""
 if 'file_suara' not in st.session_state:
@@ -49,7 +48,7 @@ if 'qa_history' not in st.session_state:
 if 'guru_aktif' not in st.session_state:
     st.session_state.guru_aktif = DATA_GURU["SD"][0] 
 
-# Mata Uang $IGIL & Pelacakan Lencana Penguasaan 
+# Mata Uang $IGIL & Pelacakan Sertifikat Penguasaan
 if 'saldo_igil' not in st.session_state:
     st.session_state.saldo_igil = 0
 if 'tampilkan_toko' not in st.session_state:
@@ -59,7 +58,7 @@ if 'tracker_penguasaan' not in st.session_state:
 if 'sertifikat_lulus' not in st.session_state:
     st.session_state.sertifikat_lulus = [] 
 
-# --- KONFIGURASI KUNCI API ---
+# --- KONFIGURASI KUNCI API & GOOGLE CLOUD ---
 try:
     API_KEY = st.secrets["GEMINI_API_KEY"]
 except Exception:
@@ -72,9 +71,10 @@ try:
     gcp_creds_dict = json.loads(gcp_json_str)
     gcp_credentials = service_account.Credentials.from_service_account_info(gcp_creds_dict)
     client_tts = texttospeech.TextToSpeechClient(credentials=gcp_credentials)
-except Exception:
+except Exception as e:
     client_tts = None
 
+# --- FUNGSI PEMBUAT SUARA GOOGLE PREMIUM ---
 def buat_suara_google(teks, nama_file, nama_suara, pitch_guru, rate_guru):
     if not client_tts:
         return
@@ -98,6 +98,7 @@ st.markdown(f"""
 </div>
 """, unsafe_allow_html=True)
 
+# --- SIMULASI TOKO PENCARIAN BEASISWA INSTAN ---
 if st.button("🎓 Tukar Saldo $IGIL Menjadi Beasiswa Instan", use_container_width=True):
     st.session_state.tampilkan_toko = not st.session_state.tampilkan_toko
 
@@ -108,24 +109,40 @@ if st.session_state.tampilkan_toko:
         col1, col2, col3 = st.columns(3)
         with col1:
             st.info("📚 **Voucher Buku Gramedia**\n\nBiaya: **500 $IGIL**")
+            if st.button("Tukar Voucher", key="tukar_1"):
+                if st.session_state.saldo_igil >= 500:
+                    st.session_state.saldo_igil -= 500
+                    st.success("✅ Berhasil! Kode Voucher: GRM-IGIL-8821")
+                else:
+                    st.error("❌ Saldo $IGIL kurang.")
         with col2:
             st.warning("🌐 **Kuota Internet Belajar 5GB**\n\nBiaya: **1.000 $IGIL**")
+            if st.button("Tukar Kuota", key="tukar_2"):
+                if st.session_state.saldo_igil >= 1000:
+                    st.session_state.saldo_igil -= 1000
+                    st.success("✅ Berhasil! Kuota masuk ke nomormu.")
+                else:
+                    st.error("❌ Saldo $IGIL kurang.")
         with col3:
             st.success("🏫 **Subsidi SPP Sekolah Rp 50.000**\n\nBiaya: **5.000 $IGIL**")
+            if st.button("Tukar SPP", key="tukar_3"):
+                if st.session_state.saldo_igil >= 5000:
+                    st.session_state.saldo_igil -= 5000
+                    st.success("✅ Berhasil! Dana dikirim ke sekolah.")
+                else:
+                    st.error("❌ Saldo $IGIL kurang.")
         st.markdown("</div><br>", unsafe_allow_html=True)
 
 st.markdown("---")
 
-# --- AREA BELAJAR ---
+# --- AREA BELAJAR & PENGISIAN DATA ---
 mode_belajar = st.radio("Pilih Sumber Materi:", ["📸 Unggah Foto Buku", "✍️ Ketik Judul Materi"], horizontal=True)
 
-nama = st.text_input("Nama Siswa:", "Rigil")
-jenjang_kelas = st.selectbox("Jenjang & Kelas:", [
-    "SD - Kelas 1", "SD - Kelas 2", "SD - Kelas 3", "SD - Kelas 4", "SD - Kelas 5", "SD - Kelas 6",
-    "SMP - Kelas 7", "SMP - Kelas 8", "SMP - Kelas 9",
-    "SMA - Kelas 10", "SMA - Kelas 11", "SMA - Kelas 12"
-], index=2)
-mapel = st.text_input("Mata Pelajaran Umum:", "Matematika")
+col_siswa, col_kelas, col_mapel = st.columns(3)
+with col_siswa: nama = st.text_input("Nama Siswa:", "Rigil")
+with col_kelas: jenjang_kelas = st.selectbox("Jenjang & Kelas:", ["SD - Kelas 1", "SD - Kelas 2", "SD - Kelas 3", "SD - Kelas 4", "SD - Kelas 5", "SD - Kelas 6", "SMP - Kelas 7", "SMP - Kelas 8", "SMP - Kelas 9", "SMA - Kelas 10", "SMA - Kelas 11", "SMA - Kelas 12"], index=2)
+with col_mapel: mapel = st.text_input("Mata Pelajaran:", "Matematika")
+# Field Bab Materi Dihapus karena AI yang akan menebak secara otomatis!
 
 if mode_belajar == "📸 Unggah Foto Buku":
     uploaded_files = st.file_uploader("Foto Halaman Buku Pelajaran (Bisa lebih dari 1):", type=["jpg", "jpeg", "png"], accept_multiple_files=True)
@@ -134,9 +151,11 @@ else:
     judul_materi = st.text_input("Penjelasan spesifik materi yang Ingin Dipelajari:")
     uploaded_files = []
 
+# --- PEMILIHAN KARAKTER GURU ---
 st.markdown("### 👨‍🏫 Pilih Guru Favoritmu!")
 jenjang_inti = jenjang_kelas.split(" - ")[0] 
 daftar_guru = DATA_GURU[jenjang_inti]
+
 nama_guru_pilihan = st.radio("Daftar Guru Tersedia:", [g['nama'] for g in daftar_guru], horizontal=True, label_visibility="collapsed")
 guru_terpilih = next(g for g in daftar_guru if g['nama'] == nama_guru_pilihan)
 
@@ -148,12 +167,12 @@ if st.button(f"🔊 Putar Suara Perkenalan {guru_terpilih['nama'].split(' ')[0]}
 st.markdown("<br>", unsafe_allow_html=True)
 btn_analisis = st.button("Mulai Belajar! 🚀", use_container_width=True, type="primary")
 
-# --- PROSES ANALISIS & AI AUTO-TAGGING ---
+# --- PROSES ANALISIS AI ---
 if btn_analisis:
     if mode_belajar == "📸 Unggah Foto Buku" and not uploaded_files:
         st.warning("Silakan unggah minimal satu foto buku dulu ya!")
     elif mode_belajar == "✍️ Ketik Judul Materi" and not judul_materi:
-        st.warning("Silakan ketik materi yang ingin dipelajari!")
+        st.warning("Silakan ketik judul materi yang ingin dipelajari!")
     else:
         st.session_state.guru_aktif = guru_terpilih
         
@@ -162,63 +181,62 @@ if btn_analisis:
                 del st.session_state[key]
         st.session_state.qa_history = [] 
         
-        with st.spinner(f"Menganalisis Sub-Topik spesifik dan menyiapkan materi..."):
+        with st.spinner(f"{st.session_state.guru_aktif['nama'].split(' ')[0]} sedang membaca materi & menyiapkan rumus tanpa kode..."):
             
-            # --- PROMPT DIPERBARUI: MEMAKSA DUAL-METODE (SEKOLAH VS HACK) ---
+            # --- PROMPT DIPERBARUI: PELACAKAN OTOMATIS & PEMBERSIHAN MATHJAX ---
             instruksi_format = f"""
-            Kamu Tutor AI. Analisis materi ini untuk siswa bernama {nama} kelas {jenjang_kelas}.
             Keluarkan persis 4 bagian berikut dengan format pembatas ketat:
 
-            ===SUB_TOPIK===
-            (Tentukan NAMA SUB-TOPIK SANGAT SPESIFIK dari materi ini. Maksimal 5 kata).
+            ===TAG_MATERI===
+            (Tuliskan nama SUB-BAB paling spesifik dari materi ini dalam maksimal 3 kata. Contoh: Perkalian Pecahan, Phytagoras 3D. Ini digunakan oleh sistem untuk mendeteksi materi secara otomatis).
 
             ===NASKAH_LAYAR===
-            (Penjelasan materi detail. Format HTML ketat).
-            ATURAN KHUSUS UNTUK MATERI HITUNGAN (Matematika/Fisika/Kimia): 
-            Kamu WAJIB menjelaskan cara penyelesaian soal/materi dalam 2 KOTAK TERPISAH menggunakan format HTML ini persis:
-            <div style="background-color:#E3F2FD; padding:15px; border-radius:8px; border-left:6px solid #2196F3; margin-bottom:15px;">
-                <h4 style="color:#0D47A1; margin-top:0;">🏫 CARA KONSEP (Standar Ujian Esai Sekolah)</h4>
-                (Jelaskan langkah demi langkah dasar yang logis dan runtut agar guru sekolah memberi nilai penuh).
-            </div>
-            <div style="background-color:#FFF8E1; padding:15px; border-radius:8px; border-left:6px solid #FFC107; margin-bottom:15px;">
-                <h4 style="color:#FF6F00; margin-top:0;">⚡ CARA CEPAT (Hack ala Bimbel / Untuk Pilihan Ganda)</h4>
-                (Jelaskan trik rahasia, jalan pintas, atau rumus kilat yang tidak diajarkan di sekolah untuk menghemat waktu ujian).
-            </div>
-            *(Jika bukan pelajaran hitungan, jelaskan secara normal dengan format HTML yang rapi).*
+            (Penjelasan materi detail. Gunakan EMOJI. Format HTML ketat, tanpa Markdown.
+            ATURAN MATEMATIKA SANGAT KETAT: DILARANG KERAS menggunakan format kode LaTeX atau MathJax seperti tanda $, \\sqrt, \\frac, atau \\text. 
+            Tuliskan rumus dengan teks biasa dan HTML murni. Contoh: gunakan <sup>2</sup> untuk kuadrat, tulis kata 'akar dari' atau simbol &radic; untuk akar, gunakan tanda kurung biasa. NASKAH HARUS BERSIH DARI KODE SIMBOL LAINNYA.)
             
             ===NASKAH_SUARA===
-            (Versi lisan dari naskah layar, tanpa emoji, angka dieja huruf. Jelaskan juga transisi dari cara konsep ke cara cepat dengan gaya bahasamu!).
+            (Versi lisan dari naskah layar, tanpa emoji, angka dan simbol WAJIB dieja dengan huruf agar terbaca mesin suara dengan mulus).
 
             ===KUIS===
-            (Buat total 5 soal. Angka/kasus WAJIB BARU dan bervariasi.
-            Format soal 1-4 (PG):
+            (Buatlah 5 soal. Angka HARUS BERBEDA dengan materi. Jika materi ini sudah pernah dibahas sebelumnya, buat variasinya.
+            Untuk soal 1 sampai 4 (Pilihan Ganda):
             Pertanyaan 1?|||Opsi 1|||Opsi 2|||Opsi 3|||Teks Jawaban Benar
+            Pertanyaan 2?|||Opsi 1|||Opsi 2|||Opsi 3|||Teks Jawaban Benar
+            Pertanyaan 3?|||Opsi 1|||Opsi 2|||Opsi 3|||Teks Jawaban Benar
             [SIMULASI UJIAN NASIONAL HOTS] Pertanyaan 4?|||Opsi 1|||Opsi 2|||Opsi 3|||Teks Jawaban Benar
-            Format soal 5 (Lisan Esai):
-            [UJIAN LISAN] Pertanyaan 5 (Esai tantangan baru)?|||LISAN
+            
+            Untuk soal 5, LEVEL BOSS (Ujian Lisan Esai):
+            [UJIAN LISAN] Pertanyaan 5?|||LISAN
             )
             """
 
             if mode_belajar == "📸 Unggah Foto Buku":
                 daftar_gambar = [Image.open(file) for file in uploaded_files]
-                payload_ai = [f"Mata Pelajaran: {mapel}\n\n" + instruksi_format] + daftar_gambar
+                konteks = f"Kamu Tutor AI ahli {mapel}. Baca materi foto ini untuk siswa bernama {nama} kelas {jenjang_kelas}."
+                payload_ai = [konteks + "\n\n" + instruksi_format] + daftar_gambar
             else:
-                payload_ai = [f"Mata Pelajaran: {mapel}\nMateri: {judul_materi}\n\n" + instruksi_format]
+                konteks = f"Kamu Tutor AI ahli {mapel}. Susun materi: '{judul_materi}' untuk siswa bernama {nama} kelas {jenjang_kelas}."
+                payload_ai = [konteks + "\n\n" + instruksi_format]
 
             try:
                 response = client_gemini.models.generate_content(model='gemini-3.6-flash', contents=payload_ai)
                 full_text = response.text
                 
-                if "===SUB_TOPIK===" in full_text:
-                    sub_topik_raw = re.search(r'===SUB_TOPIK===(.*?)(?====NASKAH_LAYAR===|$)', full_text, re.DOTALL).group(1).strip()
-                    st.session_state.sub_topik_aktif = sub_topik_raw.upper()
-                    
-                    kunci_baru = f"{jenjang_kelas}_{mapel}_{st.session_state.sub_topik_aktif}"
-                    st.session_state.kunci_aktif = kunci_baru
-                    
-                    if kunci_baru not in st.session_state.tracker_penguasaan:
-                        st.session_state.tracker_penguasaan[kunci_baru] = 0
-
+                # Menangkap Pelabelan Sub-Bab Otomatis
+                if "===TAG_MATERI===" in full_text:
+                    tag_mentah = re.search(r'===TAG_MATERI===(.*?)(?====NASKAH_LAYAR===|$)', full_text, re.DOTALL).group(1).strip().upper()
+                    # Membersihkan tag dari spasi atau karakter aneh agar database konsisten
+                    tag_bersih = "".join(e for e in tag_mentah if e.isalnum() or e.isspace())
+                    st.session_state.tag_materi = tag_bersih
+                else:
+                    st.session_state.tag_materi = "MATERI_UMUM"
+                
+                # Inisialisasi Kunci Pelacakan untuk Sub-bab Spesifik
+                KUNCI_PELACAKAN = f"{jenjang_kelas}_{mapel}_{st.session_state.tag_materi}"
+                if KUNCI_PELACAKAN not in st.session_state.tracker_penguasaan:
+                    st.session_state.tracker_penguasaan[KUNCI_PELACAKAN] = 0
+                
                 if "===NASKAH_LAYAR===" in full_text:
                     st.session_state.naskah_layar = re.search(r'===NASKAH_LAYAR===(.*?)(?====NASKAH_SUARA===|$)', full_text, re.DOTALL).group(1).strip()
                 
@@ -252,28 +270,29 @@ if btn_analisis:
 if st.session_state.berhasil_baca:
     st.markdown("---")
     
-    kunci = st.session_state.kunci_aktif
-    sub_topik = st.session_state.sub_topik_aktif
-    is_lulus = kunci in st.session_state.sertifikat_lulus
-    progres = st.session_state.tracker_penguasaan[kunci]
+    KUNCI_PELACAKAN = f"{jenjang_kelas}_{mapel}_{st.session_state.tag_materi}"
+    is_lulus = KUNCI_PELACAKAN in st.session_state.sertifikat_lulus
+    progres = st.session_state.tracker_penguasaan.get(KUNCI_PELACAKAN, 0)
     
     if is_lulus:
         st.markdown(f"""
         <div style="background: linear-gradient(135deg, #FFD700 0%, #FF8C00 100%); padding: 3px; border-radius: 15px; margin-bottom: 25px; box-shadow: 0 4px 15px rgba(0,0,0,0.2);">
             <div style="background-color: #FAFAFA; padding: 25px; border-radius: 12px; text-align: center; border: 2px dashed #FFB300;">
-                <h2 style="color: #E65100; margin: 0; font-size: 28px;">🏅 LENCANA PENGUASAAN SUB-BAB 🏅</h2>
-                <p style="font-size: 18px; color: #333; margin-top: 10px;">Diberikan secara resmi kepada: <b>{nama}</b></p>
-                <p style="font-size: 16px; color: #555;">Telah menaklukkan {BATAS_MASTER} Tantangan Ujian Nasional pada materi spesifik:</p>
-                <h3 style="color: #0078D7; margin: 5px 0;">{mapel} - {sub_topik}</h3>
+                <h1 style="color: #E65100; margin: 0; font-size: 36px;">🏆 SERTIFIKAT KELULUSAN 🏆</h1>
+                <p style="font-size: 20px; color: #333; margin-top: 10px;">Diberikan secara resmi kepada:</p>
+                <h2 style="color: #000; margin: 5px 0;">{nama}</h2>
+                <p style="font-size: 18px; color: #555;">Telah berhasil menguasai dan menaklukkan {BATAS_MASTER} variasi Tantangan Ujian Nasional pada sub-bab:</p>
+                <h3 style="color: #0078D7; margin: 5px 0;">{mapel} - {st.session_state.tag_materi}</h3>
                 <br>
-                <span style="background-color: #FFEB3B; padding: 5px 15px; border-radius: 20px; font-weight: bold; font-size: 14px;">🔒 Koin untuk {sub_topik} telah dikunci. Ayo pelajari materi lainnya!</span>
+                <span style="background-color: #FFEB3B; padding: 5px 15px; border-radius: 20px; font-weight: bold; font-size: 14px;">🔒 Penambangan Koin Untuk Materi Ini Telah Dikunci</span>
             </div>
         </div>
         """, unsafe_allow_html=True)
     else:
         st.markdown(f"""
         <div style="background-color: #E8F5E9; padding: 10px 20px; border-radius: 10px; border-left: 5px solid #4CAF50; margin-bottom: 20px;">
-            <b style="color: #2E7D32;">🎯 Target Lencana '{sub_topik}':</b> {progres} / {BATAS_MASTER} Tantangan Dikuasai.
+            <b style="color: #2E7D32;">📈 Kemajuan Penguasaan '{st.session_state.tag_materi.title()}':</b> {progres} / {BATAS_MASTER} Soal Tantangan Dikuasai.
+            <br><small style="color: #555;">(Penuhi target untuk mendapatkan Sertifikat Kelulusan!)</small>
         </div>
         """, unsafe_allow_html=True)
 
@@ -345,7 +364,7 @@ if st.session_state.berhasil_baca:
     """
     components.html(html_animasi, height=750, scrolling=True)
 
-    # --- SEGMEN KUIS & LEVEL BOSS ---
+    # --- SEGMEN KUIS, SIMULASI UJIAN, & LEVEL BOSS ---
     st.markdown("---")
     st.markdown(f"## 🏆 Latihan & Dapatkan Beasiswa $IGIL, {nama}!")
     
@@ -371,16 +390,16 @@ if st.session_state.berhasil_baca:
                             st.session_state[f"koin_diberikan_{i}"] = True
                             
                             if is_lulus:
-                                st.toast(f"✅ Benar! (Koin dikunci untuk materi {sub_topik})")
+                                st.toast("✅ Benar! (Saldo tidak bertambah karena kamu sudah Lulus di Bab ini)")
                             else:
                                 hadiah = 50 if is_hots else 10
                                 st.session_state.saldo_igil += hadiah
                                 st.toast(f"🎉 Hebat! +{hadiah} $IGIL ditambahkan!")
                                 
                                 if is_hots:
-                                    st.session_state.tracker_penguasaan[kunci] += 1
-                                    if st.session_state.tracker_penguasaan[kunci] >= BATAS_MASTER and not is_lulus:
-                                        st.session_state.sertifikat_lulus.append(kunci)
+                                    st.session_state.tracker_penguasaan[KUNCI_PELACAKAN] += 1
+                                    if st.session_state.tracker_penguasaan[KUNCI_PELACAKAN] >= BATAS_MASTER and not is_lulus:
+                                        st.session_state.sertifikat_lulus.append(KUNCI_PELACAKAN)
                                         st.balloons()
                             time.sleep(1.5)
                             st.rerun()
@@ -396,7 +415,7 @@ if st.session_state.berhasil_baca:
                     st.error("Masih kurang tepat, coba lagi pelan-pelan.")
                 st.write("")
                 
-            # --- SOAL 5: LEVEL BOSS LISAN BERWAKTU + ANTI-FARMING ---
+            # --- SOAL 5: LEVEL BOSS LISAN BERWAKTU ---
             elif q['tipe'] == "lisan":
                 boss_key = f"boss_state_{i}"
                 start_key = f"boss_start_{i}"
@@ -466,14 +485,14 @@ if st.session_state.berhasil_baca:
                             st.session_state[f"koin_diberikan_{i}"] = True
                             
                             if is_lulus:
-                                st.toast(f"✅ Level Boss Selesai (Koin dikunci untuk {sub_topik})")
+                                st.toast("✅ Level Boss Selesai (Tidak ada koin, kamu sudah Lulus bab ini)")
                             else:
                                 st.session_state.saldo_igil += 100
-                                st.session_state.tracker_penguasaan[kunci] += 1
+                                st.session_state.tracker_penguasaan[KUNCI_PELACAKAN] += 1
                                 st.toast("🎉 LEVEL BOSS DITAKLUKKAN! +100 $IGIL!")
                                 
-                                if st.session_state.tracker_penguasaan[kunci] >= BATAS_MASTER:
-                                    st.session_state.sertifikat_lulus.append(kunci)
+                                if st.session_state.tracker_penguasaan[KUNCI_PELACAKAN] >= BATAS_MASTER:
+                                    st.session_state.sertifikat_lulus.append(KUNCI_PELACAKAN)
                                     st.balloons()
                             time.sleep(1.5)
                             st.rerun()
