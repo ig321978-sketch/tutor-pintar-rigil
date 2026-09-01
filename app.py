@@ -81,16 +81,16 @@ st.title("🎓 $IGIL")
 st.markdown("### *Learn to Earn Concept*")
 st.markdown("Dengan rajin belajar di aplikasi **$IGIL**, kamu bisa membiayai pendidikanmu sendiri. <br> *Rajin belajar ➡️ Bisa jawab soal Latihan ➡️ Dapet hadiah beasiswa instant!!*", unsafe_allow_html=True)
 
-# --- DOMPET SALDO $IGIL ---
+# --- DOMPET SALDO $IGIL (DIPERBARUI MENJADI NILAI BEASISWA) ---
 st.markdown(f"""
 <div style="background-color: #E0F7FA; padding: 15px 25px; border-radius: 12px; border-left: 8px solid #00BCD4; display: flex; justify-content: space-between; align-items: center; margin-top: 20px; margin-bottom: 10px; box-shadow: 2px 2px 10px rgba(0,0,0,0.05);">
-    <div style="font-size: 18px; font-weight: bold; color: #00838F;">💰 Saldo Hadiahmu:</div>
+    <div style="font-size: 18px; font-weight: bold; color: #00838F;">💰 Nilai Beasiswa:</div>
     <div style="font-size: 26px; font-weight: 900; color: #00838F;">{st.session_state.saldo_igil} $IGIL</div>
 </div>
 """, unsafe_allow_html=True)
 
 # --- SIMULASI TOKO PENCARIAN BEASISWA INSTAN ---
-if st.button("🎓 Tukar Saldo $IGIL Menjadi Hadiah Beasiswa Instan", use_container_width=True):
+if st.button("🎓 Tukar Saldo $IGIL Menjadi Beasiswa Instan", use_container_width=True):
     st.session_state.tampilkan_toko = not st.session_state.tampilkan_toko
 
 if st.session_state.tampilkan_toko:
@@ -435,7 +435,7 @@ if st.session_state.berhasil_baca:
 
     # --- SEGMEN KUIS, SIMULASI UJIAN, & LEVEL BOSS ---
     st.markdown("---")
-    st.markdown(f"## 🏆 Latihan & Dapatkan Hadiah $IGIL, {nama}!")
+    st.markdown(f"## 🏆 Latihan & Dapatkan Beasiswa $IGIL, {nama}!")
     
     if st.session_state.daftar_kuis:
         for i, q in enumerate(st.session_state.daftar_kuis):
@@ -457,7 +457,7 @@ if st.session_state.berhasil_baca:
                         if not st.session_state.get(f"koin_diberikan_{i}", False):
                             st.session_state.saldo_igil += 50 if is_hots else 10
                             st.session_state[f"koin_diberikan_{i}"] = True
-                            st.toast(f"🎉 Hebat! Saldo $IGIL mu ditambahkan!")
+                            st.toast(f"🎉 Hebat! Saldo Beasiswa $IGIL mu bertambah!")
                             time.sleep(1.5)
                             st.rerun()
                     elif jawaban_user is None:
@@ -467,7 +467,7 @@ if st.session_state.berhasil_baca:
                 
                 status_jawaban = st.session_state.get(f"status_soal_{i}")
                 if status_jawaban == "benar":
-                    st.success("Tepat sekali! Koin $IGIL sudah ditambahkan. ⭐")
+                    st.success("Tepat sekali! Nilai beasiswamu sudah ditambahkan. ⭐")
                 elif status_jawaban == "salah":
                     st.error("Masih kurang tepat, coba lagi pelan-pelan.")
                 st.write("")
