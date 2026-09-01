@@ -6,7 +6,7 @@ import json
 import base64
 from PIL import Image
 from google import genai
-from google.genai import types # Tambahan modul untuk membaca file suara
+from google.genai import types
 from google.cloud import texttospeech
 from google.oauth2 import service_account
 
@@ -143,25 +143,30 @@ if btn_analisis:
                 del st.session_state[key]
         st.session_state.qa_history = [] 
         
-        with st.spinner(f"{st.session_state.guru_aktif['nama'].split(' ')[0]} sedang meracik materi untukmu..."):
+        with st.spinner(f"{st.session_state.guru_aktif['nama'].split(' ')[0]} sedang meracik materi & menyusun soal standar Nasional..."):
             
+            # --- PROMPT BARU: INSTRUKSI PEMBUATAN SOAL UJIAN NASIONAL ---
             instruksi_format = f"""
             Keluarkan persis 3 bagian berikut dengan format pembatas yang ketat:
 
             ===NASKAH_LAYAR===
             (Tulis penjelasan materi SANGAT DETAIL dan MENARIK. Sesuaikan gaya bahasamu dengan karaktermu. Gunakan EMOJI yang relevan 🌟🚀💡. 
             SYARAT MUTLAK: WAJIB GUNAKAN FORMAT HTML (Gunakan tag <h3>, <p>, <ul>, <li>, <strong>, <br>). 
-            DILARANG KERAS MENGGUNAKAN MARKDOWN (jangan pakai simbol bintang * atau pagar #). 
-            Susun dengan rapi. Sapa {nama} dengan gaya khasmu di kalimat pertama!)
+            DILARANG KERAS MENGGUNAKAN MARKDOWN. Sapa {nama} dengan gaya khasmu di kalimat pertama!)
 
             ===NASKAH_SUARA===
-            (Tulis versi lisan dari NASKAH_LAYAR di atas. Kalimatnya HARUS 100% sama maknanya, TETAPI DILARANG KERAS MENGGUNAKAN EMOJI SAMA SEKALI. Semua angka dan simbol matematika WAJIB DIEJA dengan huruf agar mesin suara membacanya dengan mulus.)
+            (Tulis versi lisan dari NASKAH_LAYAR di atas. Kalimatnya HARUS 100% sama maknanya, TETAPI DILARANG MENGGUNAKAN EMOJI SAMA SEKALI. Angka dan simbol WAJIB DIEJA dengan huruf.)
 
             ===KUIS===
-            (Buatlah 3 soal pilihan ganda. SYARAT WAJIB: Angka yang digunakan pada Kuis TIDAK BOLEH SAMA dengan contoh yang dibahas di Naskah Layar. Format:)
+            (Buatlah total 5 soal pilihan ganda. 
+            - Soal 1, 2, 3 adalah soal pemahaman dasar.
+            - Soal 4 dan 5 WAJIB berstandar HOTS (High Order Thinking Skills) ala soal Ujian Nasional / Asesmen Nasional (ANBK) yang membutuhkan penalaran logika/cerita.
+            SYARAT WAJIB: Angka/kasus TIDAK BOLEH SAMA dengan contoh materi. Format ketat wajib seperti ini:)
             Pertanyaan 1?|||Opsi 1|||Opsi 2|||Opsi 3|||Teks Jawaban Benar
             Pertanyaan 2?|||Opsi 1|||Opsi 2|||Opsi 3|||Teks Jawaban Benar
             Pertanyaan 3?|||Opsi 1|||Opsi 2|||Opsi 3|||Teks Jawaban Benar
+            [SIMULASI UJIAN NASIONAL HOTS] Pertanyaan 4?|||Opsi 1|||Opsi 2|||Opsi 3|||Teks Jawaban Benar
+            [SIMULASI UJIAN NASIONAL HOTS] Pertanyaan 5?|||Opsi 1|||Opsi 2|||Opsi 3|||Teks Jawaban Benar
             """
 
             if mode_belajar == "📸 Unggah Foto Buku":
@@ -309,12 +314,11 @@ if st.session_state.berhasil_baca:
     """
     components.html(html_animasi, height=750, scrolling=True)
 
-    # --- SEGMEN TANYA JAWAB (Q&A) DENGAN INPUT SUARA MIKROFON ---
+    # --- SEGMEN TANYA JAWAB (Q&A) ---
     st.markdown("---")
     st.markdown(f"## 🙋‍♂️ Ayo Bertanya, {nama}!")
-    st.info(f"💡 Tidak perlu malu atau takut salah! Kamu bebas bertanya langsung kepada {st.session_state.guru_aktif['nama'].split(' ')[0]} lewat suara atau ketikan.")
+    st.info(f"💡 Tidak perlu malu! Kamu bebas bertanya langsung kepada {st.session_state.guru_aktif['nama'].split(' ')[0]} lewat suara atau ketikan.")
 
-    # Menampilkan Riwayat Q&A
     for idx, qa in enumerate(st.session_state.qa_history):
         with st.chat_message("user", avatar="👦"):
             st.write(f"**{nama}:** {qa['tanya']}")
@@ -322,7 +326,6 @@ if st.session_state.berhasil_baca:
             st.write(qa['jawab_teks'])
             st.audio(qa['file_audio'], format="audio/mp3")
 
-    # Pilihan Input Suara atau Teks menggunakan Tab
     tab_suara, tab_teks = st.tabs(["🎙️ Tanya Pakai Suara (Lebih Asyik!)", "⌨️ Ketik Pertanyaan"])
     
     with tab_suara:
@@ -336,7 +339,6 @@ if st.session_state.berhasil_baca:
     if st.button("Kirim Pertanyaan ke Guru 🚀", use_container_width=True):
         if pertanyaan_suara or pertanyaan_teks:
             with st.spinner("Guru sedang mendengarkan dan memikirkan jawaban terbaik..."):
-                
                 prompt_qa = f"""Kamu adalah Tutor AI ahli {mapel} bernama {st.session_state.guru_aktif['nama']}.
                 Konteks materi saat ini: "{st.session_state.naskah_layar}"
                 
@@ -349,11 +351,9 @@ if st.session_state.berhasil_baca:
                 (Versi lisan dari TEKS di atas. DILARANG KERAS MENGGUNAKAN EMOJI SAMA SEKALI)
                 """
 
-                # Menyusun data yang akan dikirim ke Gemini (Teks / Audio)
                 payload_qa = []
                 if pertanyaan_suara:
                     audio_bytes = pertanyaan_suara.read()
-                    # Menambahkan prompt dan part audio
                     payload_qa = [
                         prompt_qa + f"\n\nSiswa bernama {nama} ({jenjang_kelas}) bertanya MENGGUNAKAN SUARA (Audio terlampir):",
                         types.Part.from_bytes(data=audio_bytes, mime_type='audio/wav')
@@ -372,7 +372,6 @@ if st.session_state.berhasil_baca:
                     jawab_teks = ""
                     jawab_suara = ""
                     
-                    # Memecah respon AI
                     match_tr = re.search(r'===TRANSKRIP===(.*?)(?====TEKS===|$)', full_qa_text, re.DOTALL)
                     if match_tr: tanya_transkrip = match_tr.group(1).strip()
                     
@@ -400,13 +399,20 @@ if st.session_state.berhasil_baca:
         else:
             st.warning("Eits, kamu belum bertanya apa-apa! Ketik atau rekam suara dulu ya.")
 
-    # --- SEGMEN KUIS ---
+    # --- SEGMEN KUIS & SIMULASI UJIAN ---
     st.markdown("---")
-    st.markdown(f"## 🏆 Latihan Soal untuk {nama}!")
+    st.markdown(f"## 🏆 Latihan & Simulasi Ujian untuk {nama}!")
+    st.info("Soal nomor 4 dan 5 dirancang khusus untuk melatihmu menghadapi Ujian Nasional (HOTS) lho! Buktikan kamu bisa!")
     
     if st.session_state.daftar_kuis:
         for i, q in enumerate(st.session_state.daftar_kuis):
-            st.markdown(f"**{i+1}. {q['soal']}**")
+            
+            # Jika soal merupakan soal HOTS / Ujian Nasional, berikan label khusus
+            if "[SIMULASI" in q['soal'].upper() or i >= 3:
+                soal_bersih = q['soal'].replace("[SIMULASI UJIAN NASIONAL HOTS]", "").replace("[SIMULASI UJIAN NASIONAL]", "").strip()
+                st.markdown(f"🔥 **{i+1}. [TANTANGAN UJIAN NASIONAL] {soal_bersih}**")
+            else:
+                st.markdown(f"**{i+1}. {q['soal']}**")
             
             jawaban_user = st.radio("Pilih jawaban:", q['opsi'], key=f"soal_radio_{i}", index=None, label_visibility="collapsed")
             
