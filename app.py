@@ -11,7 +11,7 @@ from google.cloud import texttospeech
 from google.oauth2 import service_account
 
 # --- DESAIN UI / CSS CUSTOM STREAMLIT ---
-st.set_page_config(page_title="Tutor Pintar Rigil", page_icon="🎓", layout="centered")
+st.set_page_config(page_title="$IGIL - Learn to Earn", page_icon="🎓", layout="centered")
 
 # --- DATABASE KARAKTER GURU ---
 DATA_GURU = {
@@ -38,14 +38,16 @@ if 'file_suara' not in st.session_state:
     st.session_state.file_suara = "audio_guru.mp3"
 if 'daftar_kuis' not in st.session_state:
     st.session_state.daftar_kuis = []
-if 'pesan_error_json' not in st.session_state:
-    st.session_state.pesan_error_json = ""
 if 'qa_history' not in st.session_state:
     st.session_state.qa_history = []
 if 'guru_aktif' not in st.session_state:
     st.session_state.guru_aktif = DATA_GURU["SD"][0] 
-if 'saldo_pintar' not in st.session_state:
-    st.session_state.saldo_pintar = 0
+
+# Mata Uang $IGIL & Modal Penukaran
+if 'saldo_igil' not in st.session_state:
+    st.session_state.saldo_igil = 0
+if 'tampilkan_toko' not in st.session_state:
+    st.session_state.tampilkan_toko = False
 
 # --- KONFIGURASI KUNCI API & GOOGLE CLOUD ---
 try:
@@ -62,40 +64,72 @@ try:
     client_tts = texttospeech.TextToSpeechClient(credentials=gcp_credentials)
 except Exception as e:
     client_tts = None
-    st.session_state.pesan_error_json = str(e)
 
 # --- FUNGSI PEMBUAT SUARA GOOGLE PREMIUM ---
 def buat_suara_google(teks, nama_file, nama_suara, pitch_guru, rate_guru):
     if not client_tts:
         raise Exception("Kunci JSON belum siap!")
-    
     synthesis_input = texttospeech.SynthesisInput(text=teks)
     voice = texttospeech.VoiceSelectionParams(language_code="id-ID", name=nama_suara)
-    audio_config = texttospeech.AudioConfig(
-        audio_encoding=texttospeech.AudioEncoding.MP3,
-        speaking_rate=rate_guru,  
-        pitch=pitch_guru            
-    )
-    
-    response = client_tts.synthesize_speech(
-        input=synthesis_input, voice=voice, audio_config=audio_config
-    )
-    
+    audio_config = texttospeech.AudioConfig(audio_encoding=texttospeech.AudioEncoding.MP3, speaking_rate=rate_guru, pitch=pitch_guru)
+    response = client_tts.synthesize_speech(input=synthesis_input, voice=voice, audio_config=audio_config)
     with open(nama_file, "wb") as out:
         out.write(response.audio_content)
 
 # --- ANTARMUKA PENGGUNA (UI) UTAMA ---
-st.title("🎓 Tutor Pintar")
-st.write("Asisten belajar cerdas dengan animasi teks dan suara AI Google Premium!")
+st.title("🎓 $IGIL")
+st.markdown("### *Learn to Earn Concept*")
+st.markdown("Dengan rajin belajar di aplikasi **$IGIL**, kamu bisa membiayai pendidikanmu sendiri. <br> *Rajin belajar ➡️ Bisa jawab soal Latihan ➡️ Dapet hadiah beasiswa instant!!*", unsafe_allow_html=True)
 
+# --- DOMPET SALDO $IGIL ---
 st.markdown(f"""
-<div style="background-color: #FFF3E0; padding: 15px 25px; border-radius: 12px; border-left: 8px solid #FF9800; display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px; box-shadow: 2px 2px 10px rgba(0,0,0,0.05);">
-    <div style="font-size: 18px; font-weight: bold; color: #E65100;">💰 Saldo Hadiah Belajarmu:</div>
-    <div style="font-size: 26px; font-weight: 900; color: #E65100;">{st.session_state.saldo_pintar} Koin $PINTAR</div>
+<div style="background-color: #E0F7FA; padding: 15px 25px; border-radius: 12px; border-left: 8px solid #00BCD4; display: flex; justify-content: space-between; align-items: center; margin-top: 20px; margin-bottom: 10px; box-shadow: 2px 2px 10px rgba(0,0,0,0.05);">
+    <div style="font-size: 18px; font-weight: bold; color: #00838F;">💰 Saldo Hadiahmu:</div>
+    <div style="font-size: 26px; font-weight: 900; color: #00838F;">{st.session_state.saldo_igil} $IGIL</div>
 </div>
 """, unsafe_allow_html=True)
 
+# --- SIMULASI TOKO PENCARIAN BEASISWA INSTAN ---
+if st.button("🎓 Tukar Saldo $IGIL Menjadi Hadiah Beasiswa Instan", use_container_width=True):
+    st.session_state.tampilkan_toko = not st.session_state.tampilkan_toko
+
+if st.session_state.tampilkan_toko:
+    with st.container():
+        st.markdown("<div style='background-color:#F5F5F5; padding:20px; border-radius:10px;'>", unsafe_allow_html=True)
+        st.markdown("### 🎁 Etalase Beasiswa Instan")
+        col1, col2, col3 = st.columns(3)
+        
+        with col1:
+            st.info("📚 **Voucher Buku Gramedia**\n\nBiaya: **500 $IGIL**")
+            if st.button("Tukar Voucher", key="tukar_1"):
+                if st.session_state.saldo_igil >= 500:
+                    st.session_state.saldo_igil -= 500
+                    st.success("✅ Berhasil! Kode Voucher: GRM-IGIL-8821")
+                else:
+                    st.error("❌ Saldo $IGIL kurang.")
+                    
+        with col2:
+            st.warning("🌐 **Kuota Internet Belajar 5GB**\n\nBiaya: **1.000 $IGIL**")
+            if st.button("Tukar Kuota", key="tukar_2"):
+                if st.session_state.saldo_igil >= 1000:
+                    st.session_state.saldo_igil -= 1000
+                    st.success("✅ Berhasil! Kuota masuk ke nomormu.")
+                else:
+                    st.error("❌ Saldo $IGIL kurang.")
+                    
+        with col3:
+            st.success("🏫 **Subsidi SPP Sekolah Rp 50.000**\n\nBiaya: **5.000 $IGIL**")
+            if st.button("Tukar SPP", key="tukar_3"):
+                if st.session_state.saldo_igil >= 5000:
+                    st.session_state.saldo_igil -= 5000
+                    st.success("✅ Berhasil! Dana dikirim ke sekolah.")
+                else:
+                    st.error("❌ Saldo $IGIL kurang.")
+        st.markdown("</div><br>", unsafe_allow_html=True)
+
 st.markdown("---")
+
+# --- AREA BELAJAR ---
 mode_belajar = st.radio("Pilih Sumber Materi:", ["📸 Unggah Foto Buku", "✍️ Ketik Judul Materi"], horizontal=True)
 
 nama = st.text_input("Nama Siswa:", "Rigil")
@@ -113,6 +147,7 @@ else:
     judul_materi = st.text_input("Topik/Judul Materi yang Ingin Dipelajari:")
     uploaded_files = []
 
+# --- PEMILIHAN KARAKTER GURU ---
 st.markdown("### 👨‍🏫 Pilih Guru Favoritmu!")
 jenjang_inti = jenjang_kelas.split(" - ")[0] 
 daftar_guru = DATA_GURU[jenjang_inti]
@@ -147,7 +182,6 @@ if btn_analisis:
             
         st.session_state.guru_aktif = guru_terpilih
         
-        # Bersihkan sesi ujian sebelumnya
         for key in list(st.session_state.keys()):
             if key.startswith('status_soal_') or key.startswith('koin_diberikan_') or key.startswith('boss_'):
                 del st.session_state[key]
@@ -401,7 +435,7 @@ if st.session_state.berhasil_baca:
 
     # --- SEGMEN KUIS, SIMULASI UJIAN, & LEVEL BOSS ---
     st.markdown("---")
-    st.markdown(f"## 🏆 Latihan & Dapatkan Hadiah Koin, {nama}!")
+    st.markdown(f"## 🏆 Latihan & Dapatkan Hadiah $IGIL, {nama}!")
     
     if st.session_state.daftar_kuis:
         for i, q in enumerate(st.session_state.daftar_kuis):
@@ -411,9 +445,9 @@ if st.session_state.berhasil_baca:
                 is_hots = "[SIMULASI" in q['soal'].upper()
                 if is_hots:
                     soal_bersih = q['soal'].replace("[SIMULASI UJIAN NASIONAL HOTS]", "").replace("[SIMULASI UJIAN NASIONAL]", "").strip()
-                    st.markdown(f"🔥 **{i+1}. [TANTANGAN LOGIKA - 50 KOIN] {soal_bersih}**")
+                    st.markdown(f"🔥 **{i+1}. [TANTANGAN LOGIKA - 50 $IGIL] {soal_bersih}**")
                 else:
-                    st.markdown(f"**{i+1}. {q['soal']} (10 Koin)**")
+                    st.markdown(f"**{i+1}. {q['soal']} (10 $IGIL)**")
                 
                 jawaban_user = st.radio("Pilih jawaban:", q['opsi'], key=f"soal_radio_{i}", index=None, label_visibility="collapsed")
                 
@@ -421,9 +455,9 @@ if st.session_state.berhasil_baca:
                     if jawaban_user == q['kunci']:
                         st.session_state[f"status_soal_{i}"] = "benar"
                         if not st.session_state.get(f"koin_diberikan_{i}", False):
-                            st.session_state.saldo_pintar += 50 if is_hots else 10
+                            st.session_state.saldo_igil += 50 if is_hots else 10
                             st.session_state[f"koin_diberikan_{i}"] = True
-                            st.toast(f"🎉 Hebat! Koin $PINTAR ditambahkan!")
+                            st.toast(f"🎉 Hebat! Saldo $IGIL mu ditambahkan!")
                             time.sleep(1.5)
                             st.rerun()
                     elif jawaban_user is None:
@@ -433,7 +467,7 @@ if st.session_state.berhasil_baca:
                 
                 status_jawaban = st.session_state.get(f"status_soal_{i}")
                 if status_jawaban == "benar":
-                    st.success("Tepat sekali! Koin sudah ditambahkan. ⭐")
+                    st.success("Tepat sekali! Koin $IGIL sudah ditambahkan. ⭐")
                 elif status_jawaban == "salah":
                     st.error("Masih kurang tepat, coba lagi pelan-pelan.")
                 st.write("")
@@ -443,13 +477,12 @@ if st.session_state.berhasil_baca:
                 boss_key = f"boss_state_{i}"
                 start_key = f"boss_start_{i}"
                 
-                # Inisialisasi Status Boss
                 if boss_key not in st.session_state:
-                    st.session_state[boss_key] = "idle" # idle, active, timeout, evaluated
+                    st.session_state[boss_key] = "idle" 
                     
                 st.markdown("---")
                 st.markdown(f"### 🐉 LEVEL BOSS: Ujian Lisan Berwaktu!")
-                st.info(f"**Tantangan 100 Koin!** Waktumu hanya 45 detik untuk menjelaskan cara kerjanya secara lisan.")
+                st.info(f"**Tantangan 100 $IGIL!** Waktumu hanya 45 detik untuk menjelaskan cara kerjanya secara lisan.")
                 
                 soal_lisan_bersih = q['soal'].replace("[UJIAN LISAN]", "").strip()
                 st.markdown(f"**Pertanyaan:** {soal_lisan_bersih}")
@@ -467,7 +500,6 @@ if st.session_state.berhasil_baca:
                     sisa_waktu = int(45 - elapsed)
                     
                     if sisa_waktu > 0:
-                        # Jam Hitung Mundur Animasi JavaScript
                         html_timer = f"""
                         <div id="timer_{i}" style="font-size:30px; color:#D32F2F; font-weight:900; text-align:center; padding:10px; border:3px dashed #D32F2F; border-radius:15px; margin-bottom:15px; background-color:#FFEBEE;">
                             ⏱️ Waktu: {sisa_waktu} Detik
@@ -492,7 +524,6 @@ if st.session_state.berhasil_baca:
                         jawaban_audio_lisan = st.audio_input("Rekam Penjelasanmu:", key=f"audio_ujian_{i}")
                         
                         if st.button("Serahkan Ujian Lisan! 🎙️", key=f"btn_lisan_{i}"):
-                            # Cek keabsahan waktu di sisi server (Grace period 2 detik toleransi sinyal)
                             if time.time() - st.session_state[start_key] > 47:
                                 st.session_state[boss_key] = "timeout"
                                 st.rerun()
@@ -506,10 +537,8 @@ if st.session_state.berhasil_baca:
                                         [STATUS] (LULUS atau GAGAL)
                                         [ALASAN] (Beri pujian atau perbaikan)
                                         """
-                                        
                                         audio_bytes_lisan = jawaban_audio_lisan.read()
                                         payload_eval = [prompt_evaluasi, types.Part.from_bytes(data=audio_bytes_lisan, mime_type='audio/wav')]
-                                        
                                         try:
                                             resp_eval = client_gemini.models.generate_content(model='gemini-3.6-flash', contents=payload_eval)
                                             st.session_state[f"boss_hasil_{i}"] = resp_eval.text
@@ -530,7 +559,7 @@ if st.session_state.berhasil_baca:
                     
                     if st.button("🔄 Minta Soal Level Boss Baru", key=f"btn_ganti_timeout_{i}"):
                         with st.spinner("Membuat soal rintangan baru..."):
-                            prompt_ganti = f"""Buat 1 soal LEVEL BOSS (Ujian Lisan HOTS) yang BARU tentang materi terkait.
+                            prompt_ganti = f"""Buat 1 soal LEVEL BOSS (Ujian Lisan HOTS) yang BARU.
                             Pertanyaan HARUS BERBEDA dari: "{soal_lisan_bersih}".
                             Keluarkan format ketat 1 BARIS INI SAJA:
                             [UJIAN LISAN] Pertanyaan Baru?|||LISAN
@@ -540,7 +569,7 @@ if st.session_state.berhasil_baca:
                                 if "|||LISAN" in resp_ganti.text:
                                     soal_baru = resp_ganti.text.split("|||")[0].strip()
                                     st.session_state.daftar_kuis[i]['soal'] = soal_baru
-                                    st.session_state[boss_key] = "idle" # Kembalikan status ke belum mulai
+                                    st.session_state[boss_key] = "idle"
                                     st.rerun()
                             except:
                                 st.error("Gagal membuat soal baru. Coba lagi.")
@@ -551,17 +580,17 @@ if st.session_state.berhasil_baca:
                     if "[STATUS] LULUS" in hasil_teks.upper():
                         st.success(hasil_teks.replace("[STATUS] LULUS", "✅ **LULUS LEVEL BOSS!**\n\n"))
                         if not st.session_state.get(f"koin_diberikan_{i}", False):
-                            st.session_state.saldo_pintar += 100
+                            st.session_state.saldo_igil += 100
                             st.session_state[f"koin_diberikan_{i}"] = True
                             st.balloons()
-                            st.toast("🎉 LEVEL BOSS DITAKLUKKAN! +100 KOIN $PINTAR!")
+                            st.toast("🎉 LEVEL BOSS DITAKLUKKAN! +100 $IGIL!")
                     else:
                         st.error(hasil_teks.replace("[STATUS] GAGAL", "❌ **BELUM LULUS!**\n\n"))
                         st.info("Penjelasanmu masih kurang tepat atau terdengar kaku. Ayo ganti soal dan coba lagi!")
                         
                         if st.button("🔄 Minta Soal Level Boss Baru", key=f"btn_ganti_gagal_{i}"):
                             with st.spinner("Membuat soal rintangan baru..."):
-                                prompt_ganti = f"""Buat 1 soal LEVEL BOSS (Ujian Lisan HOTS) yang BARU tentang materi terkait.
+                                prompt_ganti = f"""Buat 1 soal LEVEL BOSS (Ujian Lisan HOTS) yang BARU.
                                 Pertanyaan HARUS BERBEDA dari: "{soal_lisan_bersih}".
                                 Keluarkan format ketat 1 BARIS INI SAJA:
                                 [UJIAN LISAN] Pertanyaan Baru?|||LISAN
