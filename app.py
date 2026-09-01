@@ -377,7 +377,7 @@ with tab_leaderboard:
     st.markdown(html_leaderboard, unsafe_allow_html=True)
 
 # ==========================================
-# TAB 3: DASHBOARD ORANG TUA (REPORT & TELEGRAM)
+# TAB 3: DASHBOARD ORANG TUA (REPORTING)
 # ==========================================
 with tab_ortu:
     st.markdown("### 👨‍👩‍👧 Panel Pantau Orang Tua")
@@ -443,14 +443,3 @@ with tab_ortu:
         use_container_width=True,
         hide_index=True
     )
-    
-    st.markdown("---")
-    st.markdown("#### 📲 Integrasi Notifikasi Handphone")
-    no_tele = st.text_input("ID/Nomor Telegram Ayah/Bunda:", placeholder="@username_ayah atau 08123456...")
-    if st.button("Kirim Rapor Ini ke Telegram", use_container_width=True):
-        if no_tele:
-            with st.spinner("Menghubungkan ke API Telegram Bot..."):
-                time.sleep(1.5)
-                st.success(f"✅ Rapor interaktif berhasil dikirim ke perangkat Telegram: {no_tele}!")
-        else:
-            st.warning("Masukkan ID Telegram terlebih dahulu!")
