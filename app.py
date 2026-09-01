@@ -49,7 +49,7 @@ if 'qa_history' not in st.session_state:
 if 'guru_aktif' not in st.session_state:
     st.session_state.guru_aktif = DATA_GURU["SD"][0] 
 
-# Mata Uang $IGIL & Pelacakan Lencana Penguasaan (AI Auto-Tagging)
+# Mata Uang $IGIL & Pelacakan Lencana Penguasaan 
 if 'saldo_igil' not in st.session_state:
     st.session_state.saldo_igil = 0
 if 'tampilkan_toko' not in st.session_state:
@@ -164,19 +164,30 @@ if btn_analisis:
         
         with st.spinner(f"Menganalisis Sub-Topik spesifik dan menyiapkan materi..."):
             
-            # PROMPT BARU: Memaksa AI mendeteksi Sub-Topik (Micro-Credential)
+            # --- PROMPT DIPERBARUI: MEMAKSA DUAL-METODE (SEKOLAH VS HACK) ---
             instruksi_format = f"""
             Kamu Tutor AI. Analisis materi ini untuk siswa bernama {nama} kelas {jenjang_kelas}.
             Keluarkan persis 4 bagian berikut dengan format pembatas ketat:
 
             ===SUB_TOPIK===
-            (Tentukan NAMA SUB-TOPIK SANGAT SPESIFIK dari materi ini. Maksimal 5 kata. Contoh: 'Perkalian Pecahan Desimal' atau 'Perkalian Satuan Dasar'. Ini digunakan sebagai label sertifikat).
+            (Tentukan NAMA SUB-TOPIK SANGAT SPESIFIK dari materi ini. Maksimal 5 kata).
 
             ===NASKAH_LAYAR===
-            (Penjelasan materi detail. Gunakan EMOJI. Format HTML ketat, tanpa Markdown).
+            (Penjelasan materi detail. Format HTML ketat).
+            ATURAN KHUSUS UNTUK MATERI HITUNGAN (Matematika/Fisika/Kimia): 
+            Kamu WAJIB menjelaskan cara penyelesaian soal/materi dalam 2 KOTAK TERPISAH menggunakan format HTML ini persis:
+            <div style="background-color:#E3F2FD; padding:15px; border-radius:8px; border-left:6px solid #2196F3; margin-bottom:15px;">
+                <h4 style="color:#0D47A1; margin-top:0;">🏫 CARA KONSEP (Standar Ujian Esai Sekolah)</h4>
+                (Jelaskan langkah demi langkah dasar yang logis dan runtut agar guru sekolah memberi nilai penuh).
+            </div>
+            <div style="background-color:#FFF8E1; padding:15px; border-radius:8px; border-left:6px solid #FFC107; margin-bottom:15px;">
+                <h4 style="color:#FF6F00; margin-top:0;">⚡ CARA CEPAT (Hack ala Bimbel / Untuk Pilihan Ganda)</h4>
+                (Jelaskan trik rahasia, jalan pintas, atau rumus kilat yang tidak diajarkan di sekolah untuk menghemat waktu ujian).
+            </div>
+            *(Jika bukan pelajaran hitungan, jelaskan secara normal dengan format HTML yang rapi).*
             
             ===NASKAH_SUARA===
-            (Versi lisan dari naskah layar, tanpa emoji, angka dieja huruf).
+            (Versi lisan dari naskah layar, tanpa emoji, angka dieja huruf. Jelaskan juga transisi dari cara konsep ke cara cepat dengan gaya bahasamu!).
 
             ===KUIS===
             (Buat total 5 soal. Angka/kasus WAJIB BARU dan bervariasi.
@@ -202,11 +213,9 @@ if btn_analisis:
                     sub_topik_raw = re.search(r'===SUB_TOPIK===(.*?)(?====NASKAH_LAYAR===|$)', full_text, re.DOTALL).group(1).strip()
                     st.session_state.sub_topik_aktif = sub_topik_raw.upper()
                     
-                    # Membuat Kunci Gembok Unik berdasarkan ketajaman AI
                     kunci_baru = f"{jenjang_kelas}_{mapel}_{st.session_state.sub_topik_aktif}"
                     st.session_state.kunci_aktif = kunci_baru
                     
-                    # Inisialisasi pelacak jika ini sub-topik yang benar-benar baru
                     if kunci_baru not in st.session_state.tracker_penguasaan:
                         st.session_state.tracker_penguasaan[kunci_baru] = 0
 
@@ -257,7 +266,7 @@ if st.session_state.berhasil_baca:
                 <p style="font-size: 16px; color: #555;">Telah menaklukkan {BATAS_MASTER} Tantangan Ujian Nasional pada materi spesifik:</p>
                 <h3 style="color: #0078D7; margin: 5px 0;">{mapel} - {sub_topik}</h3>
                 <br>
-                <span style="background-color: #FFEB3B; padding: 5px 15px; border-radius: 20px; font-weight: bold; font-size: 14px;">🔒 Koin untuk {sub_topik} telah dikunci. Ayo foto halaman/materi lainnya!</span>
+                <span style="background-color: #FFEB3B; padding: 5px 15px; border-radius: 20px; font-weight: bold; font-size: 14px;">🔒 Koin untuk {sub_topik} telah dikunci. Ayo pelajari materi lainnya!</span>
             </div>
         </div>
         """, unsafe_allow_html=True)
@@ -265,7 +274,6 @@ if st.session_state.berhasil_baca:
         st.markdown(f"""
         <div style="background-color: #E8F5E9; padding: 10px 20px; border-radius: 10px; border-left: 5px solid #4CAF50; margin-bottom: 20px;">
             <b style="color: #2E7D32;">🎯 Target Lencana '{sub_topik}':</b> {progres} / {BATAS_MASTER} Tantangan Dikuasai.
-            <br><small style="color: #555;">(Penuhi target untuk mengunci Lencana Penguasaan Sub-Bab!)</small>
         </div>
         """, unsafe_allow_html=True)
 
@@ -359,7 +367,6 @@ if st.session_state.berhasil_baca:
                     if jawaban_user == q['kunci']:
                         st.session_state[f"status_soal_{i}"] = "benar"
                         
-                        # LOGIKA ANTI-FARMING (CEK LENCANA)
                         if not st.session_state.get(f"koin_diberikan_{i}", False):
                             st.session_state[f"koin_diberikan_{i}"] = True
                             
