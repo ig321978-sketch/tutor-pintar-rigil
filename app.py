@@ -145,7 +145,6 @@ if btn_analisis:
         
         with st.spinner(f"{st.session_state.guru_aktif['nama'].split(' ')[0]} sedang meracik materi & menyusun soal standar Nasional..."):
             
-            # --- PROMPT BARU: INSTRUKSI PEMBUATAN SOAL UJIAN NASIONAL ---
             instruksi_format = f"""
             Keluarkan persis 3 bagian berikut dengan format pembatas yang ketat:
 
@@ -334,21 +333,35 @@ if st.session_state.berhasil_baca:
         
     with tab_teks:
         st.write("**Atau ketik pertanyaanmu di kolom ini:**")
-        pertanyaan_teks = st.text_input("Ketik pertanyaan:", placeholder="Misal: Bu Guru, dari mana asalnya awan?")
+        pertanyaan_teks = st.text_input("Ketik pertanyaan:", placeholder="Misal: Bu Guru, tolong bantu aku kerjakan PR ini dong: 15 ditambah 35...")
     
     if st.button("Kirim Pertanyaan ke Guru 🚀", use_container_width=True):
         if pertanyaan_suara or pertanyaan_teks:
             with st.spinner("Guru sedang mendengarkan dan memikirkan jawaban terbaik..."):
+                
+                # --- PROMPT Q&A BARU: PROTOKOL ANTI-JOKI SISTEMATIS ---
                 prompt_qa = f"""Kamu adalah Tutor AI ahli {mapel} bernama {st.session_state.guru_aktif['nama']}.
                 Konteks materi saat ini: "{st.session_state.naskah_layar}"
                 
+                ATURAN SANGAT KETAT (METODE SCAFFOLDING & ANTI-INSTAN):
+                JIKA siswa menanyakan cara mengerjakan sebuah soal (perhitungan/eksak/PR), kamu WAJIB memandu dengan format langkah demi langkah seperti contoh di bawah ini.
+                1. DILARANG KERAS MEMBERIKAN HASIL AKHIR!
+                2. Gunakan tanda tanya "???" atau "..." untuk bagian yang harus dihitung oleh siswa.
+                
+                Contoh format jika siswa bertanya "15 + 35":
+                Halo Rigil! Mari kita selesaikan sama-sama langkah demi langkah:
+                Langkah 1. Angka Satuan: 5 + 5 = ???
+                Langkah 2. Angka Puluhan: 10 + 30 = ???
+                Langkah 3. Jumlahkan semua hasilnya: (hasil Langkah 1) + (hasil Langkah 2) = ???
+                Nah, sekarang coba kamu hitung ya!
+                
                 Keluarkan persis 3 bagian berikut secara ketat:
                 ===TRANSKRIP===
-                (Jika anak bertanya lewat suara, tulis ulang apa yang dia katakan di sini secara persis. Jika teks, cukup tulis ulang teksnya)
+                (Jika anak bertanya lewat suara, tulis ulang apa yang dia katakan di sini. Jika teks, cukup tulis ulang teksnya)
                 ===TEKS===
-                (Jawab dengan singkat, sangat jelas, memotivasi anak untuk terus berani bertanya. Sesuaikan dengan karaktermu. Gunakan emoji 🌟💡)
+                (Jawab sesuai ATURAN SANGAT KETAT di atas. Gunakan emoji 🌟💡)
                 ===SUARA===
-                (Versi lisan dari TEKS di atas. DILARANG KERAS MENGGUNAKAN EMOJI SAMA SEKALI)
+                (Versi lisan dari TEKS di atas. DILARANG MENGGUNAKAN EMOJI SAMA SEKALI. Tanda tanya "???" dibaca sebagai "titik titik titik")
                 """
 
                 payload_qa = []
@@ -382,6 +395,8 @@ if st.session_state.berhasil_baca:
                     if match_s: 
                         jawab_suara = match_s.group(1).strip()
                         jawab_suara_bersih = re.sub(r'[*#_`>-]', '', jawab_suara)
+                        # Mengubah simbol "???" menjadi ejaan agar dibaca oleh TTS
+                        jawab_suara_bersih = jawab_suara_bersih.replace('???', 'titik titik titik')
                         
                         nama_file_dinamis = f"audio_qa_{int(time.time())}.mp3"
                         guru = st.session_state.guru_aktif
@@ -407,7 +422,6 @@ if st.session_state.berhasil_baca:
     if st.session_state.daftar_kuis:
         for i, q in enumerate(st.session_state.daftar_kuis):
             
-            # Jika soal merupakan soal HOTS / Ujian Nasional, berikan label khusus
             if "[SIMULASI" in q['soal'].upper() or i >= 3:
                 soal_bersih = q['soal'].replace("[SIMULASI UJIAN NASIONAL HOTS]", "").replace("[SIMULASI UJIAN NASIONAL]", "").strip()
                 st.markdown(f"🔥 **{i+1}. [TANTANGAN UJIAN NASIONAL] {soal_bersih}**")
