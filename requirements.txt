@@ -1,5 +1,5 @@
 streamlit
 supabase
-google-genai
+google-generativeai
 google-cloud-texttospeech
 plotly
