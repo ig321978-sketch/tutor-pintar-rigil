@@ -6,13 +6,14 @@ import json
 import base64
 from PIL import Image
 from google import genai
+from google.genai import types # Tambahan modul untuk membaca file suara
 from google.cloud import texttospeech
 from google.oauth2 import service_account
 
 # --- DESAIN UI / CSS CUSTOM STREAMLIT ---
 st.set_page_config(page_title="Tutor Pintar Rigil", page_icon="🎓", layout="centered")
 
-# --- DATABASE KARAKTER GURU (BISA ANDA TAMBAH/UBAH NANTI) ---
+# --- DATABASE KARAKTER GURU ---
 DATA_GURU = {
     "SD": [
         {"nama": "Bu Nisa (Ceria & Lembut)", "voice": "id-ID-Wavenet-A", "pitch": 4.0, "rate": 0.9, "pesan": "Halo anak hebat! Aku Bu Nisa. Mari kita belajar sambil bermain dan bersenang-senang ya!"},
@@ -42,7 +43,7 @@ if 'pesan_error_json' not in st.session_state:
 if 'qa_history' not in st.session_state:
     st.session_state.qa_history = []
 if 'guru_aktif' not in st.session_state:
-    st.session_state.guru_aktif = DATA_GURU["SD"][0] # Default
+    st.session_state.guru_aktif = DATA_GURU["SD"][0] 
 
 # --- KONFIGURASI KUNCI API & GOOGLE CLOUD ---
 try:
@@ -61,15 +62,13 @@ except Exception as e:
     client_tts = None
     st.session_state.pesan_error_json = str(e)
 
-# --- FUNGSI PEMBUAT SUARA GOOGLE PREMIUM (DINAMIS SESUAI GURU) ---
+# --- FUNGSI PEMBUAT SUARA GOOGLE PREMIUM ---
 def buat_suara_google(teks, nama_file, nama_suara, pitch_guru, rate_guru):
     if not client_tts:
         raise Exception("Kunci JSON belum siap!")
     
     synthesis_input = texttospeech.SynthesisInput(text=teks)
     voice = texttospeech.VoiceSelectionParams(language_code="id-ID", name=nama_suara)
-    
-    # Kecepatan dan nada sekarang diatur otomatis sesuai karakter guru yang dipilih
     audio_config = texttospeech.AudioConfig(
         audio_encoding=texttospeech.AudioEncoding.MP3,
         speaking_rate=rate_guru,  
@@ -90,7 +89,6 @@ st.write("Asisten belajar cerdas dengan animasi teks dan suara AI Google Premium
 st.markdown("---")
 mode_belajar = st.radio("Pilih Sumber Materi:", ["📸 Unggah Foto Buku", "✍️ Ketik Judul Materi"], horizontal=True)
 
-# Input Data Siswa (Tanpa st.form agar interaktif)
 nama = st.text_input("Nama Siswa:", "Rigil")
 jenjang_kelas = st.selectbox("Jenjang & Kelas:", [
     "SD - Kelas 1", "SD - Kelas 2", "SD - Kelas 3", "SD - Kelas 4", "SD - Kelas 5", "SD - Kelas 6",
@@ -106,25 +104,20 @@ else:
     judul_materi = st.text_input("Topik/Judul Materi yang Ingin Dipelajari:")
     uploaded_files = []
 
-# --- FITUR BARU: PEMILIHAN KARAKTER GURU ---
+# --- PEMILIHAN KARAKTER GURU ---
 st.markdown("### 👨‍🏫 Pilih Guru Favoritmu!")
-jenjang_inti = jenjang_kelas.split(" - ")[0] # Mengambil "SD", "SMP", atau "SMA"
+jenjang_inti = jenjang_kelas.split(" - ")[0] 
 daftar_guru = DATA_GURU[jenjang_inti]
 
-# Membuat radio button untuk memilih guru
 nama_guru_pilihan = st.radio("Daftar Guru Tersedia:", [g['nama'] for g in daftar_guru], horizontal=True, label_visibility="collapsed")
 guru_terpilih = next(g for g in daftar_guru if g['nama'] == nama_guru_pilihan)
 
-# Tombol untuk mengetes suara guru (akan menghasilkan audio perkenalan pendek)
 if st.button(f"🔊 Putar Suara Perkenalan {guru_terpilih['nama'].split(' ')[0]}"):
     if client_tts:
         with st.spinner("Mengambil suara guru..."):
             buat_suara_google(
-                guru_terpilih['pesan'], 
-                "test_suara.mp3", 
-                guru_terpilih['voice'], 
-                guru_terpilih['pitch'], 
-                guru_terpilih['rate']
+                guru_terpilih['pesan'], "test_suara.mp3", 
+                guru_terpilih['voice'], guru_terpilih['pitch'], guru_terpilih['rate']
             )
         st.audio("test_suara.mp3", autoplay=True)
     else:
@@ -144,10 +137,7 @@ if btn_analisis:
             st.error(f"**Gagal membaca Kunci JSON Google!**")
             st.stop()
             
-        # Kunci identitas guru yang dipilih ke dalam memori sesi agar Q&A menggunakan guru yang sama
         st.session_state.guru_aktif = guru_terpilih
-        
-        # Reset riwayat untuk materi baru
         for key in list(st.session_state.keys()):
             if key.startswith('status_soal_'):
                 del st.session_state[key]
@@ -155,7 +145,6 @@ if btn_analisis:
         
         with st.spinner(f"{st.session_state.guru_aktif['nama'].split(' ')[0]} sedang meracik materi untukmu..."):
             
-            # Prompt AI disesuaikan dengan karakter guru
             instruksi_format = f"""
             Keluarkan persis 3 bagian berikut dengan format pembatas yang ketat:
 
@@ -169,20 +158,14 @@ if btn_analisis:
             (Tulis versi lisan dari NASKAH_LAYAR di atas. Kalimatnya HARUS 100% sama maknanya, TETAPI DILARANG KERAS MENGGUNAKAN EMOJI SAMA SEKALI. Semua angka dan simbol matematika WAJIB DIEJA dengan huruf agar mesin suara membacanya dengan mulus.)
 
             ===KUIS===
-            (Buatlah 3 soal pilihan ganda. SYARAT WAJIB: Pertanyaan dan angka yang digunakan pada Kuis TIDAK BOLEH SAMA dengan contoh yang sudah dibahas di Naskah Layar. Wajib gunakan format per baris, dipisah 3 garis lurus HANYA:)
+            (Buatlah 3 soal pilihan ganda. SYARAT WAJIB: Angka yang digunakan pada Kuis TIDAK BOLEH SAMA dengan contoh yang dibahas di Naskah Layar. Format:)
             Pertanyaan 1?|||Opsi 1|||Opsi 2|||Opsi 3|||Teks Jawaban Benar
             Pertanyaan 2?|||Opsi 1|||Opsi 2|||Opsi 3|||Teks Jawaban Benar
             Pertanyaan 3?|||Opsi 1|||Opsi 2|||Opsi 3|||Teks Jawaban Benar
-            (PENTING: Bagian akhir HANYA boleh berisi TEKS JAWABAN BENAR yang persis sama dengan isi salah satu opsi)
             """
 
             if mode_belajar == "📸 Unggah Foto Buku":
                 daftar_gambar = [Image.open(file) for file in uploaded_files]
-                st.write("📸 **Buku Pelajaran Asli:**")
-                kolom_gambar = st.columns(len(daftar_gambar)) if len(daftar_gambar) <= 3 else st.columns(3)
-                for i, img in enumerate(daftar_gambar):
-                    kolom_gambar[i % len(kolom_gambar)].image(img, use_container_width=True)
-                
                 konteks = f"Kamu adalah Tutor AI ahli {mapel} bernama {st.session_state.guru_aktif['nama']}. Baca materi dari foto halaman buku terlampir untuk siswa {jenjang_kelas} bernama {nama}."
                 payload_ai = [konteks + "\n\n" + instruksi_format] + daftar_gambar
             else:
@@ -207,8 +190,6 @@ if btn_analisis:
                         if match_s: 
                             naskah_suara = match_s.group(1).strip()
                             naskah_bersih = re.sub(r'[*#_`>-]', '', naskah_suara)
-                            
-                            # Eksekusi Pembuatan Suara menggunakan Parameter Guru
                             guru = st.session_state.guru_aktif
                             buat_suara_google(naskah_bersih, st.session_state.file_suara, guru['voice'], guru['pitch'], guru['rate'])
                     
@@ -233,7 +214,6 @@ if btn_analisis:
                     
                 except Exception as e:
                     if "503" in str(e) and percobaan < maksimal_coba - 1:
-                        st.warning(f"Sistem Google sedang padat. Mencoba lagi dalam 5 detik... ({percobaan + 1}/{maksimal_coba})")
                         time.sleep(5)
                     else:
                         st.error(f"Gagal memproses materi: {e}")
@@ -247,7 +227,6 @@ if st.session_state.berhasil_baca:
     with open(st.session_state.file_suara, "rb") as f:
         audio_b64 = base64.b64encode(f.read()).decode()
     
-    # HTML Kustom Animasi Teks
     html_animasi = f"""
     <!DOCTYPE html>
     <html>
@@ -311,11 +290,9 @@ if st.session_state.berhasil_baca:
                 if (audio.duration) {{
                     let adjustedTime = audio.currentTime + 0.6;
                     let progress = (adjustedTime / audio.duration) * 1.35;
-                    
                     if (progress > 1) progress = 1;
                     let targetChars = progress * totalChars;
                     let currentChars = 0;
-                    
                     for (let i = 0; i < wordData.length; i++) {{
                         currentChars += wordData[i].chars;
                         if (currentChars <= targetChars) {{
@@ -332,11 +309,12 @@ if st.session_state.berhasil_baca:
     """
     components.html(html_animasi, height=750, scrolling=True)
 
-    # --- SEGMEN TANYA JAWAB (Q&A) TAK TERBATAS ---
+    # --- SEGMEN TANYA JAWAB (Q&A) DENGAN INPUT SUARA MIKROFON ---
     st.markdown("---")
-    st.markdown(f"## 🙋‍♂️ Ada Pertanyaan, {nama}?")
-    st.info(f"💡 Belum paham? Ketik pertanyaanmu di bawah, {st.session_state.guru_aktif['nama'].split(' ')[0]} akan langsung menjawab dengan teks dan suara!")
+    st.markdown(f"## 🙋‍♂️ Ayo Bertanya, {nama}!")
+    st.info(f"💡 Tidak perlu malu atau takut salah! Kamu bebas bertanya langsung kepada {st.session_state.guru_aktif['nama'].split(' ')[0]} lewat suara atau ketikan.")
 
+    # Menampilkan Riwayat Q&A
     for idx, qa in enumerate(st.session_state.qa_history):
         with st.chat_message("user", avatar="👦"):
             st.write(f"**{nama}:** {qa['tanya']}")
@@ -344,32 +322,59 @@ if st.session_state.berhasil_baca:
             st.write(qa['jawab_teks'])
             st.audio(qa['file_audio'], format="audio/mp3")
 
-    pertanyaan_baru = st.text_input("Ketik pertanyaan barumu di sini:", placeholder="Misal: Bu Guru, kenapa bisa begitu?")
+    # Pilihan Input Suara atau Teks menggunakan Tab
+    tab_suara, tab_teks = st.tabs(["🎙️ Tanya Pakai Suara (Lebih Asyik!)", "⌨️ Ketik Pertanyaan"])
     
-    if st.button("Minta Jawaban Guru 🎙️"):
-        if pertanyaan_baru:
-            with st.spinner("Guru sedang memikirkan jawaban terbaik..."):
+    with tab_suara:
+        st.write("**Tekan ikon mikrofon di bawah ini dan mulailah bicara:**")
+        pertanyaan_suara = st.audio_input("Rekam Suaramu di sini")
+        
+    with tab_teks:
+        st.write("**Atau ketik pertanyaanmu di kolom ini:**")
+        pertanyaan_teks = st.text_input("Ketik pertanyaan:", placeholder="Misal: Bu Guru, dari mana asalnya awan?")
+    
+    if st.button("Kirim Pertanyaan ke Guru 🚀", use_container_width=True):
+        if pertanyaan_suara or pertanyaan_teks:
+            with st.spinner("Guru sedang mendengarkan dan memikirkan jawaban terbaik..."):
+                
                 prompt_qa = f"""Kamu adalah Tutor AI ahli {mapel} bernama {st.session_state.guru_aktif['nama']}.
                 Konteks materi saat ini: "{st.session_state.naskah_layar}"
                 
-                Siswa bernama {nama} ({jenjang_kelas}) bertanya: "{pertanyaan_baru}"
-                
-                Keluarkan persis 2 bagian berikut:
+                Keluarkan persis 3 bagian berikut secara ketat:
+                ===TRANSKRIP===
+                (Jika anak bertanya lewat suara, tulis ulang apa yang dia katakan di sini secara persis. Jika teks, cukup tulis ulang teksnya)
                 ===TEKS===
-                (Jawab dengan singkat, jelas, dan sesuaikan dengan karaktermu. Gunakan emoji yang sesuai 🌟💡)
+                (Jawab dengan singkat, sangat jelas, memotivasi anak untuk terus berani bertanya. Sesuaikan dengan karaktermu. Gunakan emoji 🌟💡)
                 ===SUARA===
-                (Versi lisan dari TEKS di atas. DILARANG KERAS MENGGUNAKAN EMOJI SAMA SEKALI. Angka dan simbol wajib dieja huruf)
+                (Versi lisan dari TEKS di atas. DILARANG KERAS MENGGUNAKAN EMOJI SAMA SEKALI)
                 """
+
+                # Menyusun data yang akan dikirim ke Gemini (Teks / Audio)
+                payload_qa = []
+                if pertanyaan_suara:
+                    audio_bytes = pertanyaan_suara.read()
+                    # Menambahkan prompt dan part audio
+                    payload_qa = [
+                        prompt_qa + f"\n\nSiswa bernama {nama} ({jenjang_kelas}) bertanya MENGGUNAKAN SUARA (Audio terlampir):",
+                        types.Part.from_bytes(data=audio_bytes, mime_type='audio/wav')
+                    ]
+                else:
+                    payload_qa = [prompt_qa + f"\n\nSiswa bernama {nama} ({jenjang_kelas}) bertanya: '{pertanyaan_teks}'"]
                 
                 try:
                     response_qa = client_gemini.models.generate_content(
                         model='gemini-3.6-flash',
-                        contents=prompt_qa
+                        contents=payload_qa
                     )
                     
                     full_qa_text = response_qa.text
+                    tanya_transkrip = ""
                     jawab_teks = ""
                     jawab_suara = ""
+                    
+                    # Memecah respon AI
+                    match_tr = re.search(r'===TRANSKRIP===(.*?)(?====TEKS===|$)', full_qa_text, re.DOTALL)
+                    if match_tr: tanya_transkrip = match_tr.group(1).strip()
                     
                     match_t = re.search(r'===TEKS===(.*?)(?====SUARA===|$)', full_qa_text, re.DOTALL)
                     if match_t: jawab_teks = match_t.group(1).strip()
@@ -384,16 +389,16 @@ if st.session_state.berhasil_baca:
                         buat_suara_google(jawab_suara_bersih, nama_file_dinamis, guru['voice'], guru['pitch'], guru['rate'])
                         
                         st.session_state.qa_history.append({
-                            "tanya": pertanyaan_baru,
+                            "tanya": tanya_transkrip if tanya_transkrip else "Pertanyaan Suara",
                             "jawab_teks": jawab_teks,
                             "file_audio": nama_file_dinamis
                         })
                         
                         st.rerun()
                 except Exception as e:
-                    st.error(f"Gagal membuat jawaban: {e}")
+                    st.error(f"Gagal memproses pertanyaan: {e}")
         else:
-            st.warning("Eits, ketik dulu pertanyaannya ya sebelum menekan tombol!")
+            st.warning("Eits, kamu belum bertanya apa-apa! Ketik atau rekam suara dulu ya.")
 
     # --- SEGMEN KUIS ---
     st.markdown("---")
