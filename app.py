@@ -44,6 +44,9 @@ if 'qa_history' not in st.session_state:
     st.session_state.qa_history = []
 if 'guru_aktif' not in st.session_state:
     st.session_state.guru_aktif = DATA_GURU["SD"][0] 
+# Tambahan: Dompet Hadiah Koin
+if 'saldo_pintar' not in st.session_state:
+    st.session_state.saldo_pintar = 0
 
 # --- KONFIGURASI KUNCI API & GOOGLE CLOUD ---
 try:
@@ -85,6 +88,14 @@ def buat_suara_google(teks, nama_file, nama_suara, pitch_guru, rate_guru):
 # --- ANTARMUKA PENGGUNA (UI) UTAMA ---
 st.title("🎓 Tutor Pintar")
 st.write("Asisten belajar cerdas dengan animasi teks dan suara AI Google Premium!")
+
+# Menampilkan Banner Dompet Hadiah Siswa (Simulasi Learn-to-Earn)
+st.markdown(f"""
+<div style="background-color: #FFF3E0; padding: 15px 25px; border-radius: 12px; border-left: 8px solid #FF9800; display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px; box-shadow: 2px 2px 10px rgba(0,0,0,0.05);">
+    <div style="font-size: 18px; font-weight: bold; color: #E65100;">💰 Saldo Hadiah Belajarmu:</div>
+    <div style="font-size: 26px; font-weight: 900; color: #E65100;">{st.session_state.saldo_pintar} Koin $PINTAR</div>
+</div>
+""", unsafe_allow_html=True)
 
 st.markdown("---")
 mode_belajar = st.radio("Pilih Sumber Materi:", ["📸 Unggah Foto Buku", "✍️ Ketik Judul Materi"], horizontal=True)
@@ -138,8 +149,10 @@ if btn_analisis:
             st.stop()
             
         st.session_state.guru_aktif = guru_terpilih
+        
+        # Reset riwayat status soal dan pelindung anti-curang koin
         for key in list(st.session_state.keys()):
-            if key.startswith('status_soal_'):
+            if key.startswith('status_soal_') or key.startswith('koin_diberikan_'):
                 del st.session_state[key]
         st.session_state.qa_history = [] 
         
@@ -339,7 +352,7 @@ if st.session_state.berhasil_baca:
         if pertanyaan_suara or pertanyaan_teks:
             with st.spinner("Guru sedang mendengarkan dan memikirkan jawaban terbaik..."):
                 
-                # --- PROMPT Q&A BARU: PROTOKOL ANTI-JOKI SISTEMATIS ---
+                # PROTOKOL ANTI-JOKI SISTEMATIS (Dipertahankan)
                 prompt_qa = f"""Kamu adalah Tutor AI ahli {mapel} bernama {st.session_state.guru_aktif['nama']}.
                 Konteks materi saat ini: "{st.session_state.naskah_layar}"
                 
@@ -395,7 +408,6 @@ if st.session_state.berhasil_baca:
                     if match_s: 
                         jawab_suara = match_s.group(1).strip()
                         jawab_suara_bersih = re.sub(r'[*#_`>-]', '', jawab_suara)
-                        # Mengubah simbol "???" menjadi ejaan agar dibaca oleh TTS
                         jawab_suara_bersih = jawab_suara_bersih.replace('???', 'titik titik titik')
                         
                         nama_file_dinamis = f"audio_qa_{int(time.time())}.mp3"
@@ -414,15 +426,17 @@ if st.session_state.berhasil_baca:
         else:
             st.warning("Eits, kamu belum bertanya apa-apa! Ketik atau rekam suara dulu ya.")
 
-    # --- SEGMEN KUIS & SIMULASI UJIAN ---
+    # --- SEGMEN KUIS, SIMULASI UJIAN, & PENAMBANGAN KOIN ---
     st.markdown("---")
-    st.markdown(f"## 🏆 Latihan & Simulasi Ujian untuk {nama}!")
-    st.info("Soal nomor 4 dan 5 dirancang khusus untuk melatihmu menghadapi Ujian Nasional (HOTS) lho! Buktikan kamu bisa!")
+    st.markdown(f"## 🏆 Latihan & Dapatkan Hadiah Koin, {nama}!")
+    st.info("Jawab dengan benar untuk menambah Koin $PINTAR milikmu. Soal Tantangan Ujian Nasional akan memberikan hadiah koin 5x lebih banyak (50 Koin)!")
     
     if st.session_state.daftar_kuis:
         for i, q in enumerate(st.session_state.daftar_kuis):
             
-            if "[SIMULASI" in q['soal'].upper() or i >= 3:
+            is_hots = "[SIMULASI" in q['soal'].upper() or i >= 3
+            
+            if is_hots:
                 soal_bersih = q['soal'].replace("[SIMULASI UJIAN NASIONAL HOTS]", "").replace("[SIMULASI UJIAN NASIONAL]", "").strip()
                 st.markdown(f"🔥 **{i+1}. [TANTANGAN UJIAN NASIONAL] {soal_bersih}**")
             else:
@@ -433,6 +447,23 @@ if st.session_state.berhasil_baca:
             if st.button(f"Cek Jawaban Soal {i+1}", key=f"btn_cek_{i}"):
                 if jawaban_user == q['kunci']:
                     st.session_state[f"status_soal_{i}"] = "benar"
+                    
+                    # LOGIKA PEMBERIAN HADIAH KOIN (Anti-Curang, hanya diberikan sekali per soal)
+                    if not st.session_state.get(f"koin_diberikan_{i}", False):
+                        if is_hots:
+                            st.session_state.saldo_pintar += 50
+                            st.toast("🎉 Luar biasa! Kamu mendapatkan hadiah 50 Koin $PINTAR!")
+                        else:
+                            st.session_state.saldo_pintar += 10
+                            st.toast("🌟 Bagus sekali! Kamu mendapatkan hadiah 10 Koin $PINTAR!")
+                        
+                        # Mengunci agar soal ini tidak bisa memberikan koin lagi meski ditekan berulang-ulang
+                        st.session_state[f"koin_diberikan_{i}"] = True
+                        
+                        # Segarkan layar agar dompet di atas ter-update secara visual
+                        time.sleep(1.5)
+                        st.rerun()
+
                     if i == len(st.session_state.daftar_kuis) - 1:
                         st.balloons() 
                 elif jawaban_user is None:
@@ -442,10 +473,10 @@ if st.session_state.berhasil_baca:
             
             status_jawaban = st.session_state.get(f"status_soal_{i}")
             if status_jawaban == "benar":
-                st.success("Tepat sekali! Ini hadiah bintang untukmu! ⭐")
+                st.success("Tepat sekali! Koinmu sudah bertambah! ⭐")
             elif status_jawaban == "kosong":
                 st.warning("Kamu belum memilih jawaban, klik salah satu bulatan dulu ya.")
             elif status_jawaban == "salah":
-                st.error("Wah, masih kurang tepat. Coba hitung pelan-pelan lagi ya!")
+                st.error("Wah, masih kurang tepat. Jangan menyerah, coba teliti lagi!")
             
             st.write("")
