@@ -136,19 +136,27 @@ if st.session_state.tampilkan_toko:
 st.markdown("---")
 
 # --- AREA BELAJAR & PENGISIAN DATA ---
-mode_belajar = st.radio("Pilih Sumber Materi:", ["📸 Unggah Foto Buku", "✍️ Ketik Judul Materi"], horizontal=True)
+mode_belajar = st.radio("Pilih Sumber Materi:", ["📸 Unggah Foto Buku", "✍️ Pilih/Ketik Topik Materi"], horizontal=True)
 
 col_siswa, col_kelas, col_mapel = st.columns(3)
 with col_siswa: nama = st.text_input("Nama Siswa:", "Rigil")
 with col_kelas: jenjang_kelas = st.selectbox("Jenjang & Kelas:", ["SD - Kelas 1", "SD - Kelas 2", "SD - Kelas 3", "SD - Kelas 4", "SD - Kelas 5", "SD - Kelas 6", "SMP - Kelas 7", "SMP - Kelas 8", "SMP - Kelas 9", "SMA - Kelas 10", "SMA - Kelas 11", "SMA - Kelas 12"], index=2)
 with col_mapel: mapel = st.text_input("Mata Pelajaran:", "Matematika")
-# Field Bab Materi Dihapus karena AI yang akan menebak secara otomatis!
 
 if mode_belajar == "📸 Unggah Foto Buku":
     uploaded_files = st.file_uploader("Foto Halaman Buku Pelajaran (Bisa lebih dari 1):", type=["jpg", "jpeg", "png"], accept_multiple_files=True)
     judul_materi = ""
 else:
-    judul_materi = st.text_input("Penjelasan spesifik materi yang Ingin Dipelajari:")
+    pilihan_bab = st.selectbox("Pilih Topik Pembelajaran:", [
+        "Bab 1", "Bab 2", "Bab 3", "Bab 4", "Bab 5", 
+        "Bab 6", "Bab 7", "Bab 8", "LAINNYA (Ketik Manual)"
+    ])
+    
+    if pilihan_bab == "LAINNYA (Ketik Manual)":
+        judul_materi = st.text_input("Bab Materi yang ingin dipelajari:", placeholder="Contoh: Transformasi Geometri")
+    else:
+        judul_materi = pilihan_bab
+        
     uploaded_files = []
 
 # --- PEMILIHAN KARAKTER GURU ---
@@ -159,7 +167,8 @@ daftar_guru = DATA_GURU[jenjang_inti]
 nama_guru_pilihan = st.radio("Daftar Guru Tersedia:", [g['nama'] for g in daftar_guru], horizontal=True, label_visibility="collapsed")
 guru_terpilih = next(g for g in daftar_guru if g['nama'] == nama_guru_pilihan)
 
-if st.button(f"🔊 Putar Suara Perkenalan {guru_terpilih['nama'].split(' ')[0]}"):
+# MEMPERBAIKI TEKS TOMBOL MENJADI LEBIH BERSIH
+if st.button("🔊 Putar Suara Perkenalan"):
     if client_tts:
         buat_suara_google(guru_terpilih['pesan'], "test_suara.mp3", guru_terpilih['voice'], guru_terpilih['pitch'], guru_terpilih['rate'])
         st.audio("test_suara.mp3", autoplay=True)
@@ -171,8 +180,8 @@ btn_analisis = st.button("Mulai Belajar! 🚀", use_container_width=True, type="
 if btn_analisis:
     if mode_belajar == "📸 Unggah Foto Buku" and not uploaded_files:
         st.warning("Silakan unggah minimal satu foto buku dulu ya!")
-    elif mode_belajar == "✍️ Ketik Judul Materi" and not judul_materi:
-        st.warning("Silakan ketik judul materi yang ingin dipelajari!")
+    elif mode_belajar == "✍️ Pilih/Ketik Topik Materi" and not judul_materi:
+        st.warning("Silakan pilih Bab atau ketik materi yang ingin dipelajari!")
     else:
         st.session_state.guru_aktif = guru_terpilih
         
@@ -181,14 +190,16 @@ if btn_analisis:
                 del st.session_state[key]
         st.session_state.qa_history = [] 
         
-        with st.spinner(f"{st.session_state.guru_aktif['nama'].split(' ')[0]} sedang membaca materi & menyiapkan rumus tanpa kode..."):
+        # Ekstrak nama asli guru tanpa karakter/sifat di dalam kurung
+        nama_asli_guru = st.session_state.guru_aktif['nama'].split('(')[0].strip()
+        
+        with st.spinner(f"{nama_asli_guru} sedang membaca kurikulum & menyiapkan rumus tanpa kode..."):
             
-            # --- PROMPT DIPERBARUI: PELACAKAN OTOMATIS & PEMBERSIHAN MATHJAX ---
             instruksi_format = f"""
             Keluarkan persis 4 bagian berikut dengan format pembatas ketat:
 
             ===TAG_MATERI===
-            (Tuliskan nama SUB-BAB paling spesifik dari materi ini dalam maksimal 3 kata. Contoh: Perkalian Pecahan, Phytagoras 3D. Ini digunakan oleh sistem untuk mendeteksi materi secara otomatis).
+            (Tuliskan nama SUB-BAB paling spesifik dari materi ini dalam maksimal 3 kata. Jika referensi hanya 'Bab 4', analisis materi apa Bab 4 untuk Kelas/Mapel yang diminta berdasarkan kurikulum nasional Indonesia, lalu tuliskan nama topiknya. Ini digunakan oleh sistem untuk mendeteksi materi secara otomatis).
 
             ===NASKAH_LAYAR===
             (Penjelasan materi detail. Gunakan EMOJI. Format HTML ketat, tanpa Markdown.
@@ -213,26 +224,23 @@ if btn_analisis:
 
             if mode_belajar == "📸 Unggah Foto Buku":
                 daftar_gambar = [Image.open(file) for file in uploaded_files]
-                konteks = f"Kamu Tutor AI ahli {mapel}. Baca materi foto ini untuk siswa bernama {nama} kelas {jenjang_kelas}."
+                konteks = f"Kamu Tutor AI ahli {mapel} bernama {nama_asli_guru}. Baca materi foto ini untuk siswa bernama {nama} kelas {jenjang_kelas}."
                 payload_ai = [konteks + "\n\n" + instruksi_format] + daftar_gambar
             else:
-                konteks = f"Kamu Tutor AI ahli {mapel}. Susun materi: '{judul_materi}' untuk siswa bernama {nama} kelas {jenjang_kelas}."
+                konteks = f"Kamu Tutor AI ahli {mapel} bernama {nama_asli_guru}. Susun materi: '{judul_materi}' untuk siswa bernama {nama} kelas {jenjang_kelas}."
                 payload_ai = [konteks + "\n\n" + instruksi_format]
 
             try:
                 response = client_gemini.models.generate_content(model='gemini-3.6-flash', contents=payload_ai)
                 full_text = response.text
                 
-                # Menangkap Pelabelan Sub-Bab Otomatis
                 if "===TAG_MATERI===" in full_text:
                     tag_mentah = re.search(r'===TAG_MATERI===(.*?)(?====NASKAH_LAYAR===|$)', full_text, re.DOTALL).group(1).strip().upper()
-                    # Membersihkan tag dari spasi atau karakter aneh agar database konsisten
                     tag_bersih = "".join(e for e in tag_mentah if e.isalnum() or e.isspace())
                     st.session_state.tag_materi = tag_bersih
                 else:
                     st.session_state.tag_materi = "MATERI_UMUM"
                 
-                # Inisialisasi Kunci Pelacakan untuk Sub-bab Spesifik
                 KUNCI_PELACAKAN = f"{jenjang_kelas}_{mapel}_{st.session_state.tag_materi}"
                 if KUNCI_PELACAKAN not in st.session_state.tracker_penguasaan:
                     st.session_state.tracker_penguasaan[KUNCI_PELACAKAN] = 0
@@ -270,6 +278,9 @@ if btn_analisis:
 if st.session_state.berhasil_baca:
     st.markdown("---")
     
+    # Ekstrak nama asli guru untuk tampilan judul
+    nama_asli_guru = st.session_state.guru_aktif['nama'].split('(')[0].strip()
+    
     KUNCI_PELACAKAN = f"{jenjang_kelas}_{mapel}_{st.session_state.tag_materi}"
     is_lulus = KUNCI_PELACAKAN in st.session_state.sertifikat_lulus
     progres = st.session_state.tracker_penguasaan.get(KUNCI_PELACAKAN, 0)
@@ -296,7 +307,8 @@ if st.session_state.berhasil_baca:
         </div>
         """, unsafe_allow_html=True)
 
-    st.markdown(f"## 🎧 Dengarkan Penjelasan {st.session_state.guru_aktif['nama'].split(' ')[0]}")
+    # MEMPERBAIKI JUDUL AUDIO MENJADI NAMA UTUH GURU
+    st.markdown(f"## 🎧 Dengarkan Penjelasan {nama_asli_guru}")
     with open(st.session_state.file_suara, "rb") as f:
         audio_b64 = base64.b64encode(f.read()).decode()
     
@@ -363,6 +375,79 @@ if st.session_state.berhasil_baca:
     </html>
     """
     components.html(html_animasi, height=750, scrolling=True)
+
+    # --- SEGMEN TANYA JAWAB (Q&A) ---
+    st.markdown("---")
+    st.markdown(f"## 🙋‍♂️ Tanya Jawab Bebas")
+    
+    for idx, qa in enumerate(st.session_state.qa_history):
+        with st.chat_message("user", avatar="👦"):
+            st.write(f"**{nama}:** {qa['tanya']}")
+        with st.chat_message("assistant", avatar="👩‍🏫"):
+            st.write(qa['jawab_teks'])
+            st.audio(qa['file_audio'], format="audio/mp3")
+
+    tab_suara, tab_teks = st.tabs(["🎙️ Tanya Pakai Suara", "⌨️ Ketik Pertanyaan"])
+    with tab_suara:
+        pertanyaan_suara = st.audio_input("Rekam Suaramu di sini", key="tanya_suara")
+    with tab_teks:
+        pertanyaan_teks = st.text_input("Ketik pertanyaan:", placeholder="Misal: Bu Guru, 15 ditambah 35 berapa?")
+    
+    if st.button("Kirim Pertanyaan 🚀", use_container_width=True):
+        if pertanyaan_suara or pertanyaan_teks:
+            with st.spinner("Sedang memikirkan jawaban..."):
+                prompt_qa = f"""Kamu Tutor AI ahli {mapel} bernama {nama_asli_guru}.
+                Konteks: "{st.session_state.naskah_layar}"
+                
+                ATURAN ANTI-INSTAN:
+                JIKA siswa tanya jawaban hitungan, PANDU LANGKAH DEMI LANGKAH dan JANGAN SEBUT HASIL AKHIR.
+                Gunakan "???" untuk bagian yang harus dihitung anak.
+                
+                Keluarkan persis:
+                ===TRANSKRIP===
+                ===TEKS===
+                ===SUARA===
+                """
+                payload_qa = []
+                if pertanyaan_suara:
+                    audio_bytes = pertanyaan_suara.read()
+                    payload_qa = [
+                        prompt_qa + f"\n\nSiswa bernama {nama} ({jenjang_kelas}) bertanya MENGGUNAKAN SUARA:",
+                        types.Part.from_bytes(data=audio_bytes, mime_type='audio/wav')
+                    ]
+                else:
+                    payload_qa = [prompt_qa + f"\n\nSiswa bertanya: '{pertanyaan_teks}'"]
+                
+                try:
+                    response_qa = client_gemini.models.generate_content(model='gemini-3.6-flash', contents=payload_qa)
+                    full_qa_text = response_qa.text
+                    
+                    tanya_transkrip = ""
+                    jawab_teks = ""
+                    jawab_suara = ""
+                    
+                    match_tr = re.search(r'===TRANSKRIP===(.*?)(?====TEKS===|$)', full_qa_text, re.DOTALL)
+                    if match_tr: tanya_transkrip = match_tr.group(1).strip()
+                    match_t = re.search(r'===TEKS===(.*?)(?====SUARA===|$)', full_qa_text, re.DOTALL)
+                    if match_t: jawab_teks = match_t.group(1).strip()
+                    match_s = re.search(r'===SUARA===(.*)', full_qa_text, re.DOTALL)
+                    if match_s: 
+                        jawab_suara = match_s.group(1).strip()
+                        jawab_suara_bersih = re.sub(r'[*#_`>-]', '', jawab_suara).replace('???', 'titik titik titik')
+                        
+                        nama_file_dinamis = f"audio_qa_{int(time.time())}.mp3"
+                        buat_suara_google(jawab_suara_bersih, nama_file_dinamis, guru_terpilih['voice'], guru_terpilih['pitch'], guru_terpilih['rate'])
+                        
+                        st.session_state.qa_history.append({
+                            "tanya": tanya_transkrip if tanya_transkrip else "Pertanyaan Suara",
+                            "jawab_teks": jawab_teks,
+                            "file_audio": nama_file_dinamis
+                        })
+                        st.rerun()
+                except Exception as e:
+                    st.error(f"Gagal memproses pertanyaan: {e}")
+        else:
+            st.warning("Silakan bertanya dulu!")
 
     # --- SEGMEN KUIS, SIMULASI UJIAN, & LEVEL BOSS ---
     st.markdown("---")
@@ -452,7 +537,7 @@ if st.session_state.berhasil_baca:
                                 st.rerun()
                             elif jawaban_audio_lisan:
                                 with st.spinner("Menganalisis suaramu..."):
-                                    prompt_evaluasi = f"Evaluasi suara siswa untuk soal: '{soal_lisan_bersih}'. Jika logika benar dan suara natural, beri [STATUS] LULUS. Jika salah/terdengar baca robot, beri [STATUS] GAGAL. Beri alasan singkat."
+                                    prompt_evaluasi = f"Evaluasi suara siswa untuk soal: '{soal_lisan_bersih}'. Kamu adalah {nama_asli_guru}. Jika logika benar dan suara natural, beri [STATUS] LULUS. Jika salah/terdengar baca robot, beri [STATUS] GAGAL. Beri alasan singkat."
                                     try:
                                         resp_eval = client_gemini.models.generate_content(model='gemini-3.6-flash', contents=[prompt_evaluasi, types.Part.from_bytes(data=jawaban_audio_lisan.read(), mime_type='audio/wav')])
                                         st.session_state[f"boss_hasil_{i}"] = resp_eval.text
