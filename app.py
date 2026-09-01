@@ -57,7 +57,7 @@ if 'leaderboard' not in st.session_state:
         {"Nama": "Arif (SD Sby)", "Saldo": 2800}, {"Nama": "Nanda (SD Mdn)", "Saldo": 1500}
     ]
 
-# Dummy Data Histori Belajar untuk Dashboard Orang Tua
+# Dummy Data Histori Belajar untuk Rapor Anak
 if 'histori_belajar' not in st.session_state:
     st.session_state.histori_belajar = [
         {"tanggal": "28 Agustus 2026", "mapel": "IPA (Sains)", "bab": "Tata Surya", "skor": 45, "status": "Kurang Fokus"},
@@ -119,8 +119,8 @@ if st.session_state.nyawa <= 0:
             st.warning("Saldo $IGIL mu tidak cukup. Kembalilah besok!")
     st.stop() 
 
-# --- NAVIGASI TAB ---
-tab_belajar, tab_leaderboard, tab_ortu = st.tabs(["📚 Ruang Belajar", "🏆 Papan Peringkat", "👨‍👩‍👧 Dashboard Orang Tua"])
+# --- NAVIGASI TAB (URUTAN DIPERBARUI) ---
+tab_belajar, tab_rapor, tab_leaderboard = st.tabs(["📚 Ruang Belajar", "👨‍👩‍👧 Rapor Anak", "🏆 Papan Peringkat"])
 
 # ==========================================
 # TAB 1: RUANG BELAJAR
@@ -279,7 +279,7 @@ with tab_belajar:
                         if jawaban_user == q['kunci']:
                             st.session_state[f"status_soal_{i}"] = "benar"
                             
-                            # SIMULASI PENCATATAN KE DASHBOARD ORTU
+                            # SIMULASI PENCATATAN KE RAPOR ANAK
                             data_log_baru = {"tanggal": "1 September 2026", "mapel": mapel, "bab": st.session_state.tag_materi.title(), "skor": 100, "status": "Berhasil"}
                             if data_log_baru not in st.session_state.histori_belajar:
                                 st.session_state.histori_belajar.append(data_log_baru)
@@ -360,27 +360,10 @@ with tab_belajar:
                                 st.rerun()
 
 # ==========================================
-# TAB 2: PAPAN PERINGKAT (LEADERBOARD)
+# TAB 2: RAPOR ANAK (DASHBOARD ORANG TUA)
 # ==========================================
-with tab_leaderboard:
-    st.markdown("### 🏆 Papan Peringkat Nasional")
-    semua_pemain = st.session_state.leaderboard.copy()
-    semua_pemain.append({"Nama": f"{nama} (Kamu)", "Saldo": st.session_state.saldo_igil})
-    semua_pemain = sorted(semua_pemain, key=lambda x: x['Saldo'], reverse=True)
-    
-    html_leaderboard = "<div style='background-color:#FAFAFA; padding:20px; border-radius:10px;'>"
-    for idx, p in enumerate(semua_pemain):
-        medali = "🥇" if idx == 0 else "🥈" if idx == 1 else "🥉" if idx == 2 else "🎓"
-        warna_bg = "#E3F2FD" if "(Kamu)" in p['Nama'] else "#FFFFFF"
-        html_leaderboard += f"<div style='display:flex; justify-content:space-between; padding:15px; margin-bottom:10px; background-color:{warna_bg}; border-radius:8px; border:1px solid #E0E0E0;'><div style='font-size:18px;'><b>{medali} Peringkat {idx+1}</b> - {p['Nama']}</div><div style='font-size:18px; font-weight:bold; color:#00838F;'>{p['Saldo']} $IGIL</div></div>"
-    html_leaderboard += "</div>"
-    st.markdown(html_leaderboard, unsafe_allow_html=True)
-
-# ==========================================
-# TAB 3: DASHBOARD ORANG TUA (REPORTING)
-# ==========================================
-with tab_ortu:
-    st.markdown("### 👨‍👩‍👧 Panel Pantau Orang Tua")
+with tab_rapor:
+    st.markdown("### 👨‍👩‍👧 Rapor Anak")
     
     # --- 1. RINGKASAN HARI INI ---
     aktivitas_hari_ini = [log for log in st.session_state.histori_belajar if log['tanggal'] == "1 September 2026"]
@@ -443,3 +426,20 @@ with tab_ortu:
         use_container_width=True,
         hide_index=True
     )
+
+# ==========================================
+# TAB 3: PAPAN PERINGKAT (LEADERBOARD)
+# ==========================================
+with tab_leaderboard:
+    st.markdown("### 🏆 Papan Peringkat Nasional")
+    semua_pemain = st.session_state.leaderboard.copy()
+    semua_pemain.append({"Nama": f"{nama} (Kamu)", "Saldo": st.session_state.saldo_igil})
+    semua_pemain = sorted(semua_pemain, key=lambda x: x['Saldo'], reverse=True)
+    
+    html_leaderboard = "<div style='background-color:#FAFAFA; padding:20px; border-radius:10px;'>"
+    for idx, p in enumerate(semua_pemain):
+        medali = "🥇" if idx == 0 else "🥈" if idx == 1 else "🥉" if idx == 2 else "🎓"
+        warna_bg = "#E3F2FD" if "(Kamu)" in p['Nama'] else "#FFFFFF"
+        html_leaderboard += f"<div style='display:flex; justify-content:space-between; padding:15px; margin-bottom:10px; background-color:{warna_bg}; border-radius:8px; border:1px solid #E0E0E0;'><div style='font-size:18px;'><b>{medali} Peringkat {idx+1}</b> - {p['Nama']}</div><div style='font-size:18px; font-weight:bold; color:#00838F;'>{p['Saldo']} $IGIL</div></div>"
+    html_leaderboard += "</div>"
+    st.markdown(html_leaderboard, unsafe_allow_html=True)
