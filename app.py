@@ -115,32 +115,56 @@ if nama_input:
         with tab1:
             col_tingkat, col_mapel = st.columns(2)
             with col_tingkat:
-                tingkat = st.selectbox("Tingkat Pendidikan", ["SD - Kelas 3", "SMP", "SMA - Kelas 12"])
+                # DAFTAR TINGKAT PENDIDIKAN DARI KELAS 1 SD - 12 SMA
+                tingkat = st.selectbox("Tingkat Pendidikan", [
+                    "SD - Kelas 1", "SD - Kelas 2", "SD - Kelas 3", "SD - Kelas 4", "SD - Kelas 5", "SD - Kelas 6", 
+                    "SMP - Kelas 7", "SMP - Kelas 8", "SMP - Kelas 9", 
+                    "SMA - Kelas 10", "SMA - Kelas 11", "SMA - Kelas 12"
+                ])
             with col_mapel:
-                mapel = st.selectbox("Mata Pelajaran", ["Matematika", "Tematik", "Sains / IPA", "Lainnya"])
+                # DAFTAR MATA PELAJARAN LENGKAP
+                mapel = st.selectbox("Mata Pelajaran", [
+                    "Matematika", "Tematik (SD)", "IPA Terpadu (SMP)", "IPS Terpadu (SMP)", 
+                    "Bahasa Indonesia", "Bahasa Inggris", "Fisika (SMA)", "Kimia (SMA)", 
+                    "Biologi (SMA)", "Ekonomi", "Geografi", "Sosiologi", "Sejarah", 
+                    "Pendidikan Pancasila (PPKn)", "Lainnya"
+                ])
                 
-            # DIKEMBALIKAN: Input Judul / Bab Materi
             judul_bab = st.text_input("Judul / Bab Materi:", placeholder="Contoh: Pecahan, Transformasi Geometri, dll.")
-                
             guru_pilihan = st.radio("🧑‍🏫 Pilih Guru Favoritmu:", ["Bu Nisa (Ceria & Lembut)", "Pak Andi (Asyik & Lucu)"], horizontal=True)
 
-            foto_buku = st.file_uploader("📸 Foto Halaman Buku Pelajaran", type=["jpg", "jpeg", "png"])
+            metode_belajar = st.radio("Metode Belajar:", ["Ambil dari Foto/Gambar", "Ketik Teks Materi Langsung"], horizontal=True)
+
+            teks_materi = None
+            foto_buku = None
+
+            if metode_belajar == "Ambil dari Foto/Gambar":
+                foto_buku = st.file_uploader("📸 Foto Halaman Buku Pelajaran", type=["jpg", "jpeg", "png"])
+            else:
+                teks_materi = st.text_area("📝 Ketik atau tempelkan materi pelajaran di sini:")
 
             if st.button("🚀 Mulai Belajar!", use_container_width=True):
                 if not judul_bab:
                     st.warning("Mohon isi Judul / Bab Materi terlebih dahulu agar guru bisa fokus.")
-                elif foto_buku is None:
+                elif metode_belajar == "Ambil dari Foto/Gambar" and foto_buku is None:
                     st.error("Tolong unggah foto buku pelajarannya dulu ya!")
+                elif metode_belajar == "Ketik Teks Materi Langsung" and not teks_materi:
+                    st.error("Tolong ketik materi pelajarannya dulu ya!")
                 else:
                     with st.spinner("🧠 Guru AI sedang meracik materi belajar..."):
                         try:
-                            # 1. Panggil Gemini AI dengan konteks Judul Bab
+                            # 1. Panggil Gemini AI
                             model = genai.GenerativeModel('gemini-1.5-flash')
                             nama_guru_singkat = "Bu Nisa" if "Nisa" in guru_pilihan else "Pak Andi"
-                            prompt = f"Kamu adalah {nama_guru_singkat}, guru {mapel} untuk siswa {tingkat}. Materi saat ini adalah tentang '{judul_bab}'. Berdasarkan gambar buku ini, jelaskan intisari materinya dengan gaya bahasa yang sesuai tingkat usianya. Akhiri dengan satu pertanyaan kuis interaktif."
                             
-                            img = Image.open(foto_buku)
-                            respons_ai = model.generate_content([prompt, img])
+                            if metode_belajar == "Ambil dari Foto/Gambar":
+                                prompt = f"Kamu adalah {nama_guru_singkat}, guru {mapel} untuk siswa {tingkat}. Materi saat ini adalah tentang '{judul_bab}'. Berdasarkan gambar buku ini, jelaskan intisari materinya dengan gaya bahasa yang sesuai tingkat usianya. Akhiri dengan satu pertanyaan kuis interaktif."
+                                img = Image.open(foto_buku)
+                                respons_ai = model.generate_content([prompt, img])
+                            else:
+                                prompt = f"Kamu adalah {nama_guru_singkat}, guru {mapel} untuk siswa {tingkat}. Materi saat ini adalah tentang '{judul_bab}'. Berdasarkan teks berikut, jelaskan intisari materinya dengan gaya bahasa yang sesuai tingkat usianya. Akhiri dengan satu pertanyaan kuis interaktif.\n\nTeks Materi:\n{teks_materi}"
+                                respons_ai = model.generate_content(prompt)
+
                             naskah_materi = respons_ai.text
 
                             # 2. Buat Suara TTS
@@ -151,11 +175,9 @@ if nama_input:
                             st.audio(audio_bytes, format="audio/mp3")
                             st.write_stream(efek_mengetik(naskah_materi))
                             
-                            # Tampilkan grafik dinamis
                             st.write("---")
                             tampilkan_grafik_contoh(judul_bab)
                             
-                            # Update hadiah Beasiswa
                             st.success("🎉 Luar biasa! Hadiah 10 $IGIL telah ditambahkan ke dompet beasiswamu!")
                             saldo_baru = saldo + 10
                             supabase.table("profil_siswa").update({"saldo_igil": saldo_baru}).eq("nama", nama_input).execute()
