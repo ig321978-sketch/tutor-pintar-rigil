@@ -302,14 +302,6 @@ with tab_belajar:
         pilihan_mapel = st.selectbox("Mata Pelajaran:", ["Matematika", "Bahasa Indonesia", "Bahasa Inggris", "IPA (Sains)", "IPS (Sosial)", "Fisika", "Kimia", "Biologi", "LAINNYA (Ketik Manual)"])
         mapel = st.text_input("Ketik Mata Pelajaran:", placeholder="Contoh: Muatan Lokal") if pilihan_mapel == "LAINNYA (Ketik Manual)" else pilihan_mapel
 
-    if mode_belajar == "📸 Unggah Foto Buku":
-        uploaded_files = st.file_uploader("Foto Halaman Buku Pelajaran:", type=["jpg", "jpeg", "png"], accept_multiple_files=True)
-        judul_materi = ""
-    else:
-        pilihan_bab = st.selectbox("Pilih Topik Pembelajaran:", ["Bab 1", "Bab 2", "Bab 3", "Bab 4", "Bab 5", "LAINNYA (Ketik Manual)"])
-        judul_materi = st.text_input("Bab Materi yang ingin dipelajari:", placeholder="Contoh: Transformasi Geometri") if pilihan_bab == "LAINNYA (Ketik Manual)" else pilihan_bab
-        uploaded_files = []
-
     st.markdown("### 👨‍🏫 Pilih Guru Favoritmu!")
     jenjang_inti = jenjang_kelas.split(" - ")[0] 
     daftar_guru = DATA_GURU[jenjang_inti]
