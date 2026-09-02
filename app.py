@@ -86,17 +86,12 @@ def buat_suara_google(teks, nama_file, nama_suara, pitch_guru, rate_guru):
 # --- FUNGSI LOGIKA KURIKULUM MERDEKA (DINAMIS) ---
 def get_mapel_list(kelas):
     if "SD" in kelas:
-        if "Kelas 1" in kelas or "Kelas 2" in kelas:
-            return ["Matematika", "Bahasa Indonesia", "Pendidikan Pancasila", "Bahasa Inggris", "Seni & Prakarya", "PJOK"]
-        else:
-            return ["Matematika", "Bahasa Indonesia", "IPAS", "Pendidikan Pancasila", "Bahasa Inggris", "Seni & Prakarya", "PJOK"]
-    elif "SMP" in kelas:
-        return ["Matematika", "Bahasa Indonesia", "IPA", "IPS", "Bahasa Inggris", "Pendidikan Pancasila", "Informatika", "Seni Budaya", "PJOK", "Prakarya"]
+        if "Kelas 1" in kelas or "Kelas 2" in kelas: return ["Matematika", "Bahasa Indonesia", "Pendidikan Pancasila", "Bahasa Inggris", "Seni & Prakarya", "PJOK"]
+        else: return ["Matematika", "Bahasa Indonesia", "IPAS", "Pendidikan Pancasila", "Bahasa Inggris", "Seni & Prakarya", "PJOK"]
+    elif "SMP" in kelas: return ["Matematika", "Bahasa Indonesia", "IPA", "IPS", "Bahasa Inggris", "Pendidikan Pancasila", "Informatika", "Seni Budaya", "PJOK", "Prakarya"]
     elif "SMA" in kelas:
-        if "Kelas 10" in kelas:
-            return ["Matematika", "Bahasa Indonesia", "IPA Terpadu", "IPS Terpadu", "Bahasa Inggris", "Pendidikan Pancasila", "Informatika", "Seni Budaya", "PJOK"]
-        else:
-            return ["Matematika Wajib", "Matematika Tingkat Lanjut", "Fisika", "Kimia", "Biologi", "Ekonomi", "Sosiologi", "Geografi", "Sejarah", "Bahasa Indonesia", "Bahasa Inggris", "Pendidikan Pancasila", "Informatika", "PJOK"]
+        if "Kelas 10" in kelas: return ["Matematika", "Bahasa Indonesia", "IPA Terpadu", "IPS Terpadu", "Bahasa Inggris", "Pendidikan Pancasila", "Informatika", "Seni Budaya", "PJOK"]
+        else: return ["Matematika Wajib", "Matematika Tingkat Lanjut", "Fisika", "Kimia", "Biologi", "Ekonomi", "Sosiologi", "Geografi", "Sejarah", "Bahasa Indonesia", "Bahasa Inggris", "Pendidikan Pancasila", "Informatika", "PJOK"]
     return []
 
 def get_bab_list(kelas, mapel):
@@ -105,21 +100,17 @@ def get_bab_list(kelas, mapel):
         if mapel == "IPAS": return ["Bab 1: Mari Kenali Hewan di Sekitarmu", "Bab 2: Siklus Hidup Makhluk Hidup", "Bab 3: Hidup Bersama Alam", "Bab 4: Benda dan Sifatnya", "Bab 5: Energi di Sekitar Kita", "Bab 6: Permukaan Bumi"]
         if mapel == "Bahasa Indonesia": return ["Bab 1: Mari Bermain & Belajar", "Bab 2: Kawan Seiring", "Bab 3: Pengalamanku", "Bab 4: Cuaca di Sekitarku", "Bab 5: Berkomunikasi yang Baik"]
         if mapel == "Pendidikan Pancasila": return ["Bab 1: Aku Anak Indonesia", "Bab 2: Mengenal Lambang Negara", "Bab 3: Hak dan Kewajibanku di Rumah & Sekolah", "Bab 4: Kebersamaan dalam Keberagaman"]
-    
     if "SMP" in kelas:
         if mapel == "Matematika": return ["Bab 1: Bilangan Berpangkat & Bentuk Akar", "Bab 2: Persamaan & Pertidaksamaan Linear", "Bab 3: Fungsi Kuadrat", "Bab 4: Teorema Pythagoras", "Bab 5: Transformasi Geometri", "Bab 6: Kesebangunan & Kekongruenan", "Bab 7: Bangun Ruang Sisi Datar & Lengkung", "Bab 8: Statistika & Peluang"]
         if mapel == "IPA": return ["Bab 1: Besaran & Pengukuran", "Bab 2: Klasifikasi Makhluk Hidup", "Bab 3: Suhu, Kalor, & Pemuaian", "Bab 4: Gerak & Gaya", "Bab 5: Sistem Pencernaan & Pernapasan", "Bab 6: Sistem Peredaran Darah", "Bab 7: Tekanan Zat", "Bab 8: Listrik Statis & Dinamis", "Bab 9: Kemagnetan & Induksi Elektromagnetik"]
         if mapel == "IPS": return ["Bab 1: Keadaan Alam & Aktivitas Penduduk Indonesia", "Bab 2: Dinamika Kependudukan & Pembangunan", "Bab 3: Perubahan Sosial Budaya & Globalisasi", "Bab 4: Interaksi Antarruang & Dampaknya", "Bab 5: Masa Kemerdekaan hingga Reformasi"]
         if mapel == "Informatika": return ["Bab 1: Berpikir Komputasional", "Bab 2: Sistem Komputer", "Bab 3: Jaringan Komputer & Internet", "Bab 4: Analisis Data", "Bab 5: Algoritma & Pemrograman"]
-
     if "SMA" in kelas and "Kelas 10" not in kelas:
         if mapel == "Fisika": return ["Bab 1: Listrik Statis & Dinamis", "Bab 2: Medan Magnet & Induksi Elektromagnetik", "Bab 3: Rangkaian Arus Bolak-Balik (AC)", "Bab 4: Gelombang Elektromagnetik", "Bab 5: Relativitas Khusus", "Bab 6: Konsep Fotokimia & Kuantum", "Bab 7: Fisika Inti & Radioaktivitas"]
         if mapel == "Kimia": return ["Bab 1: Struktur Atom & Tabel Periodik", "Bab 2: Ikatan Kimia", "Bab 3: Stoikiometri & Laju Reaksi", "Bab 4: Kesetimbangan Kimia", "Bab 5: Larutan Asam Basa & Penyangga", "Bab 6: Sifat Koligatif Larutan", "Bab 7: Reaksi Redoks & Elektrokimia", "Bab 8: Kimia Karbon & Makromolekul"]
         if mapel == "Biologi": return ["Bab 1: Struktur & Fungsi Sel", "Bab 2: Sistem Gerak & Sirkulasi", "Bab 3: Sistem Pencernaan & Pernapasan", "Bab 4: Sistem Koordinasi, Hormon & Saraf", "Bab 5: Reproduksi Manusia", "Bab 6: Pertumbuhan & Perkembangan", "Bab 7: Metabolisme & Enzim", "Bab 8: Pewarisan Sifat (Genetika)", "Bab 9: Evolusi", "Bab 10: Bioteknologi"]
         if mapel == "Ekonomi": return ["Bab 1: Konsep Dasar Ilmu Ekonomi", "Bab 2: Keseimbangan Pasar & Struktur Pasar", "Bab 3: Lembaga Jasa Keuangan", "Bab 4: Pendapatan Nasional & Kesenjangan", "Bab 5: APBN & APBD", "Bab 6: Kebijakan Moneter & Fiskal", "Bab 7: Akuntansi Perusahaan Jasa", "Bab 8: Akuntansi Perusahaan Dagang"]
         if mapel == "Sosiologi": return ["Bab 1: Kelompok Sosial dalam Masyarakat", "Bab 2: Permasalahan Sosial Akibat Globalisasi", "Bab 3: Perbedaan, Kesetaraan, & Harmoni Sosial", "Bab 4: Konflik Sosial & Resolusi", "Bab 5: Kearifan Lokal & Pemberdayaan Komunitas"]
-        if mapel == "Matematika Tingkat Lanjut": return ["Bab 1: Polinomial (Suku Banyak)", "Bab 2: Matriks & Transformasi", "Bab 3: Limit Fungsi Trigonometri", "Bab 4: Turunan Fungsi Trigonometri", "Bab 5: Integral Substitusi & Parsial", "Bab 6: Irisan Kerucut", "Bab 7: Distribusi Binomial & Normal"]
-
     return [f"Bab 1: Pendahuluan {mapel}", f"Bab 2: Konsep Dasar {mapel}", f"Bab 3: Analisis {mapel}"]
 
 # --- HEADER GLOBAL APLIKASI ---
@@ -127,20 +118,17 @@ st.title("🎓 $IGIL")
 st.markdown("### *Learn to Earn Concept*")
 
 # ==========================================
-# HALAMAN LOGIN DENGAN FORMULIR
+# HALAMAN LOGIN
 # ==========================================
 if not st.session_state.sudah_login:
     st.markdown("---")
     st.markdown("### 👋 Selamat Datang! Silakan Masuk")
     st.info("Masukkan nama kamu untuk memulai belajar dan mengumpulkan POINT KAMU.")
-    
     with st.form("formulir_login"):
         input_nama = st.text_input("Nama Siswa:", placeholder="Contoh: Jagoan")
         btn_masuk = st.form_submit_button("Masuk 🚀", use_container_width=True)
-        
         if btn_masuk:
-            if input_nama.strip() == "":
-                st.warning("Nama tidak boleh kosong!")
+            if input_nama.strip() == "": st.warning("Nama tidak boleh kosong!")
             else:
                 st.session_state.nama_siswa = input_nama.strip()
                 st.session_state.sudah_login = True
@@ -148,14 +136,13 @@ if not st.session_state.sudah_login:
     st.stop() 
 
 # ==========================================
-# APLIKASI UTAMA (SETELAH LOGIN)
+# APLIKASI UTAMA
 # ==========================================
 nama_siswa = st.session_state.nama_siswa
 siswa_id = str(uuid.uuid5(uuid.NAMESPACE_DNS, nama_siswa.lower()))
 
 col_header1, col_header2 = st.columns([3, 1])
-with col_header1:
-    st.success(f"Masuk sebagai: **{nama_siswa}**")
+with col_header1: st.success(f"Masuk sebagai: **{nama_siswa}**")
 with col_header2:
     if st.button("Keluar / Ganti Akun"):
         st.session_state.sudah_login = False
@@ -174,14 +161,11 @@ if koneksi_db_aktif:
         else:
             saldo_saat_ini = profil_resp.data[0]["saldo_igil"]
             nyawa_saat_ini = profil_resp.data[0]["nyawa_belajar"]
-            
         histori_resp = supabase.table("histori_belajar").select("*").eq("siswa_id", siswa_id).order("created_at", desc=True).execute()
         data_histori_db = histori_resp.data
-        
         if st.session_state.tag_materi:
             progres_resp = supabase.table("histori_belajar").select("id").eq("siswa_id", siswa_id).eq("bab", st.session_state.tag_materi).execute()
             penguasaan_materi = len(progres_resp.data)
-            
         lb_resp = supabase.table("profil_siswa").select("nama, saldo_igil").order("saldo_igil", desc=True).limit(10).execute()
         data_leaderboard_db = lb_resp.data
     except Exception as e:
@@ -214,7 +198,6 @@ tab_belajar, tab_rapor, tab_leaderboard = st.tabs(["📚 Ruang Belajar", "👨�
 with tab_belajar:
     if st.button("🎁 Tukar POINT KAMU Menjadi BEASISWA INSTAN", use_container_width=True):
         st.session_state.tampilkan_toko = not st.session_state.tampilkan_toko
-
     if st.session_state.tampilkan_toko:
         st.markdown("<div style='background-color:#F5F5F5; padding:20px; border-radius:10px;'>### 🎁 Etalase BEASISWA INSTAN", unsafe_allow_html=True)
         col1, col2, col3 = st.columns(3)
@@ -246,24 +229,15 @@ with tab_belajar:
 
     col_kelas, col_mapel = st.columns(2)
     with col_kelas: 
-        jenjang_kelas = st.selectbox("Jenjang & Kelas:", [
-            "SD - Kelas 1", "SD - Kelas 2", "SD - Kelas 3", "SD - Kelas 4", "SD - Kelas 5", "SD - Kelas 6", 
-            "SMP - Kelas 7", "SMP - Kelas 8", "SMP - Kelas 9", 
-            "SMA - Kelas 10", "SMA - Kelas 11", "SMA - Kelas 12"
-        ], index=2)
-        
+        jenjang_kelas = st.selectbox("Jenjang & Kelas:", ["SD - Kelas 1", "SD - Kelas 2", "SD - Kelas 3", "SD - Kelas 4", "SD - Kelas 5", "SD - Kelas 6", "SMP - Kelas 7", "SMP - Kelas 8", "SMP - Kelas 9", "SMA - Kelas 10", "SMA - Kelas 11", "SMA - Kelas 12"], index=2)
     jenjang_inti = jenjang_kelas.split(" - ")[0] 
     
     with col_mapel: 
         daftar_mapel_dinamis = get_mapel_list(jenjang_kelas)
         daftar_mapel_dinamis.append("LAINNYA (ketik disini)")
-        
         pilihan_mapel = st.selectbox("Mata Pelajaran:", daftar_mapel_dinamis)
-        
-        if pilihan_mapel == "LAINNYA (ketik disini)":
-            mapel = st.text_input("Ketik Mata Pelajaran spesifik:", placeholder="Contoh: Muatan Lokal / Bahasa Sunda")
-        else:
-            mapel = pilihan_mapel
+        if pilihan_mapel == "LAINNYA (ketik disini)": mapel = st.text_input("Ketik Mata Pelajaran spesifik:", placeholder="Contoh: Muatan Lokal / Bahasa Sunda")
+        else: mapel = pilihan_mapel
 
     if mode_belajar == "📸 Unggah Foto Buku":
         uploaded_files = st.file_uploader("Foto Halaman Buku Pelajaran:", type=["jpg", "jpeg", "png"], accept_multiple_files=True)
@@ -271,13 +245,9 @@ with tab_belajar:
     else:
         daftar_bab_dinamis = get_bab_list(jenjang_kelas, mapel)
         daftar_bab_dinamis.append("LAINNYA (ketik disini)")
-        
         pilihan_bab = st.selectbox("Pilih Topik/Bab Pembelajaran:", daftar_bab_dinamis)
-        
-        if pilihan_bab == "LAINNYA (ketik disini)":
-            judul_materi = st.text_input("Ketik Bab/Topik spesifik:", placeholder="Contoh: Menghitung Luas Segitiga")
-        else:
-            judul_materi = pilihan_bab
+        if pilihan_bab == "LAINNYA (ketik disini)": judul_materi = st.text_input("Ketik Bab/Topik spesifik:", placeholder="Contoh: Menghitung Luas Segitiga")
+        else: judul_materi = pilihan_bab
         uploaded_files = []
 
     st.markdown("### 👨‍🏫 Pilih Guru Favoritmu!")
@@ -299,23 +269,21 @@ with tab_belajar:
             st.session_state.guru_aktif = guru_terpilih
             for key in list(st.session_state.keys()):
                 if key.startswith('status_soal_') or key.startswith('koin_diberikan_') or key.startswith('boss_'): del st.session_state[key]
-            
-            if koneksi_db_aktif:
-                 supabase.table("profil_siswa").update({"jenjang_kelas": jenjang_kelas}).eq("id", siswa_id).execute()
+            if koneksi_db_aktif: supabase.table("profil_siswa").update({"jenjang_kelas": jenjang_kelas}).eq("id", siswa_id).execute()
                  
             nama_asli_guru = st.session_state.guru_aktif['nama'].split('(')[0].strip()
             
-            with st.spinner(f"{nama_asli_guru} sedang menyiapkan materi {mapel} bergambar untuk {jenjang_kelas}..."):
+            with st.spinner(f"{nama_asli_guru} sedang menyiapkan materi beserta gambar ilustrasi untuk {jenjang_kelas}..."):
+                # PERBAIKAN FATAL: Memaksa AI hanya mengeluarkan 1 naskah agar suara 100% sinkron, dan mengunci format URL gambar
                 instruksi_format = """
-                Keluarkan 4 bagian:
+                Keluarkan hanya 3 bagian:
                 ===TAG_MATERI=== (Maksimal 3 kata spesifik)
-                ===NASKAH_LAYAR=== (HTML murni yang atraktif. WAJIB sertakan 1 atau 2 gambar ilustrasi yang relevan menggunakan tag HTML ini: <img src="https://image.pollinations.ai/prompt/DESKRIPSI_GAMBAR_DALAM_BAHASA_INGGRIS?width=600&height=400&nologo=true" style="width:100%; border-radius:8px; margin: 15px 0; box-shadow: 0 4px 8px rgba(0,0,0,0.1);">. Pastikan ganti DESKRIPSI_GAMBAR_DALAM_BAHASA_INGGRIS dengan kata kunci objek yang spesifik. DILARANG LaTeX/MathJax.)
-                ===NASKAH_SUARA=== (Teks lisan yang panjang dan seru untuk audio)
+                ===NASKAH_LAYAR=== (Ini adalah penjelasan materi berbentuk HTML murni. WAJIB sisipkan 1 atau 2 gambar ilustrasi dengan tag ini: <img src="https://image.pollinations.ai/prompt/DESKRIPSI+GAMBAR+BAHASA+INGGRIS?width=600&height=400&nologo=true" style="width:100%; border-radius:8px; margin: 15px 0;">. SANGAT PENTING: Gunakan tanda plus (+) untuk mengganti spasi pada URL gambar. DILARANG menggunakan tanda kutip/spasi di dalam URL. DILARANG menggunakan format Markdown/LaTeX.)
                 ===KUIS=== (5 soal. Soal 4: [SIMULASI UJIAN NASIONAL HOTS] Pertanyaan?|||Opsi 1|||Opsi 2|||Opsi 3|||Kunci. Soal 5: [UJIAN LISAN] Pertanyaan?|||LISAN)
                 """
-                payload_ai = [f"Kamu Tutor AI {mapel} bernama {nama_asli_guru}. Susun materi: '{judul_materi}' untuk siswa bernama {nama_siswa} kelas {jenjang_kelas}. Sesuaikan kurikulum, gaya bahasa, dan kedalaman materi dengan jenjang kelas tersebut.\n\n{instruksi_format}"]
+                payload_ai = [f"Kamu Tutor AI {mapel} bernama {nama_asli_guru}. Susun materi: '{judul_materi}' untuk siswa bernama {nama_siswa} kelas {jenjang_kelas}. Sesuaikan gaya bahasa dengan anak usia {jenjang_kelas}.\n\n{instruksi_format}"]
                 if mode_belajar == "📸 Unggah Foto Buku":
-                    payload_ai = [f"Kamu Tutor AI {mapel} bernama {nama_asli_guru}. Baca foto buku ini untuk siswa bernama {nama_siswa} kelas {jenjang_kelas}. Sesuaikan gaya bahasa dan kedalaman materi dengan jenjang kelas tersebut.\n\n{instruksi_format}"] + [Image.open(f) for f in uploaded_files]
+                    payload_ai = [f"Kamu Tutor AI {mapel} bernama {nama_asli_guru}. Baca foto buku ini untuk {nama_siswa} kelas {jenjang_kelas}. Sesuaikan gaya bahasa.\n\n{instruksi_format}"] + [Image.open(f) for f in uploaded_files]
 
                 try:
                     response = client_gemini.models.generate_content(model='gemini-3.6-flash', contents=payload_ai)
@@ -326,12 +294,14 @@ with tab_belajar:
                         st.session_state.tag_materi = "".join(e for e in tag_mentah if e.isalnum() or e.isspace())
                     
                     if "===NASKAH_LAYAR===" in full_text: 
-                        naskah_bersih = re.search(r'===NASKAH_LAYAR===(.*?)(?====NASKAH_SUARA===|$)', full_text, re.DOTALL).group(1).strip()
-                        st.session_state.naskah_layar = naskah_bersih.replace('\n', '<br>')
+                        naskah_kotor = re.search(r'===NASKAH_LAYAR===(.*?)(?====KUIS===|$)', full_text, re.DOTALL).group(1).strip()
+                        st.session_state.naskah_layar = naskah_kotor.replace('\n', '<br>')
                         
-                    if "===NASKAH_SUARA===" in full_text:
-                        naskah_suara = re.search(r'===NASKAH_SUARA===(.*?)(?====KUIS===|$)', full_text, re.DOTALL).group(1).strip()
-                        buat_suara_google(re.sub(r'[*#_`>-]', '', naskah_suara), st.session_state.file_suara, guru_terpilih['voice'], guru_terpilih['pitch'], guru_terpilih['rate'])
+                        # --- SOLUSI SINKRONISASI SUARA 100% ---
+                        # Kita sedot naskah layar, hapus gambar dan tag HTML-nya, lalu berikan sisanya ke Google TTS
+                        teks_suara_murni = re.sub(r'<[^>]+>', '', naskah_kotor) # Hapus semua tag HTML & img
+                        teks_suara_murni = re.sub(r'[*#_`>-]', '', teks_suara_murni) # Hapus sisa markdown
+                        buat_suara_google(teks_suara_murni, st.session_state.file_suara, guru_terpilih['voice'], guru_terpilih['pitch'], guru_terpilih['rate'])
                     
                     if "===KUIS===" in full_text:
                         lines = [line for line in re.search(r'===KUIS===(.*)', full_text, re.DOTALL).group(1).strip().split('\n') if '|||' in line]
@@ -367,7 +337,10 @@ with tab_belajar:
         
         with open(st.session_state.file_suara, "rb") as f: audio_b64 = base64.b64encode(f.read()).decode()
         
-        # --- HTML DENGAN AUTO SCROLL & KECEPATAN DIPERLAMBAT ---
+        # Melindungi HTML agar tidak merusak Javascript
+        safe_html = st.session_state.naskah_layar.replace('\\', '\\\\').replace('`', '\\`').replace('$', '\\$')
+        
+        # --- HTML DENGAN AUTO SCROLL & KECEPATAN DIPERLAMBAT 50% ---
         html_typewriter = f"""
         <div style="text-align:center; padding:15px; background:#fff; border-radius:10px; box-shadow:0 2px 8px rgba(0,0,0,0.1); margin-bottom:20px;">
             <audio id="guruAudio" controls style="width: 100%;">
@@ -376,13 +349,13 @@ with tab_belajar:
             <p style="font-size:12px; color:#888; margin-top:5px;">Tekan tombol Play untuk mulai mendengarkan penjelasan</p>
         </div>
         
-        <!-- Wadah luar dengan ketinggian tetap dan fungsi Auto Scroll -->
+        <!-- Wadah luar dengan Auto Scroll -->
         <div id="scrollContainer" style="background-color:#F4FBFF; border-left:6px solid #2AB3FF; padding:25px; border-radius:10px; font-family:sans-serif; font-size:17px; line-height:1.7; height: 350px; overflow-y: auto; scroll-behavior: smooth; position: relative;">
             <div id="typewriterBox"></div>
         </div>
 
         <script>
-            const rawHTMLText = `{st.session_state.naskah_layar}`;
+            const rawHTMLText = `{safe_html}`;
             const targetDiv = document.getElementById("typewriterBox");
             const scrollContainer = document.getElementById("scrollContainer");
             const audioEl = document.getElementById("guruAudio");
@@ -392,8 +365,8 @@ with tab_belajar:
             let currentIndex = 0;
             let typingInterval;
             
-            // Kecepatan diperlambat ~50% (dari 40ms menjadi 75ms) agar sinkron dengan laju baca.
-            const typingSpeedMs = 75; 
+            // Kecepatan sangat diperlambat (110ms) agar selaras dengan lisan santai
+            const typingSpeedMs = 110; 
             
             function typeWriter() {{
                 if (currentIndex < rawHTMLText.length) {{
@@ -412,7 +385,7 @@ with tab_belajar:
                     }}
                     targetDiv.innerHTML = typedText;
                     
-                    // Fitur Auto-Scroll ke bawah mengikuti naskah
+                    // Fitur Auto-Scroll
                     scrollContainer.scrollTop = scrollContainer.scrollHeight;
                 }} else {{
                     clearInterval(typingInterval);
@@ -437,15 +410,11 @@ with tab_belajar:
             audioEl.addEventListener('ended', () => {{
                 clearInterval(typingInterval);
                 targetDiv.innerHTML = rawHTMLText;
-                // Scroll penuh di akhir
-                setTimeout(() => {{
-                    scrollContainer.scrollTop = scrollContainer.scrollHeight;
-                }}, 100);
+                setTimeout(() => {{ scrollContainer.scrollTop = scrollContainer.scrollHeight; }}, 100);
             }});
         </script>
         """
         components.html(html_typewriter, height=520)
-        # --- AKHIR BLOK ANIMASI ---
 
         st.markdown("---")
         st.markdown(f"## 🏆 Latihan & Dapatkan POINT KAMU!")
@@ -467,8 +436,7 @@ with tab_belajar:
                                     supabase.table("profil_siswa").update({"saldo_igil": saldo_saat_ini + hadiah}).eq("id", siswa_id).execute()
                                     log_baru = {"siswa_id": siswa_id, "mapel": mapel, "bab": st.session_state.tag_materi.title(), "skor": 100 if is_hots else 80, "status_lulus": is_hots}
                                     supabase.table("histori_belajar").insert(log_baru).execute()
-                                    if not is_lulus and penguasaan_materi + 1 >= BATAS_MASTER: 
-                                        st.balloons()
+                                    if not is_lulus and penguasaan_materi + 1 >= BATAS_MASTER: st.balloons()
                                 st.rerun()
                         elif jawaban_user is not None:
                             st.session_state[f"status_soal_{i}"] = "salah"
@@ -543,7 +511,6 @@ with tab_belajar:
 # ==========================================
 with tab_rapor:
     st.markdown("### 👨‍👩‍👧 Rapor Anak")
-    
     hari_ini = datetime.now().strftime("%Y-%m-%d")
     aktivitas_hari_ini = [log for log in data_histori_db if str(log.get('created_at', '')).startswith(hari_ini)]
     
@@ -556,12 +523,10 @@ with tab_rapor:
         st.error(f"❌ Anak Anda, **{nama_siswa}**, BELUM membuka materi pelajaran apa pun hari ini.")
         
     st.markdown("<br>", unsafe_allow_html=True)
-    
     st.markdown("#### 📊 Rapor Akademik Keseluruhan")
     if len(data_histori_db) > 0:
         rata_rata = sum([item['skor'] for item in data_histori_db]) / len(data_histori_db)
         rata_rata = round(rata_rata)
-        
         warna_grafik, warna_bg, status_rapor = ("#F44336", "#FFEBEE", "🔴 PERLU PERHATIAN EKSTRA") if rata_rata <= 50 else ("#FFC107", "#FFF8E1", "🟡 CUKUP BAIK") if rata_rata <= 80 else ("#4CAF50", "#E8F5E9", "🟢 SANGAT MEMUASKAN")
             
         components.html(f"""
