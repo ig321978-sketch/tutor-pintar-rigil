@@ -260,37 +260,37 @@ with tab_belajar:
 
     if st.session_state.tampilkan_toko:
         with st.container():
-            st.markdown("<div style='background-color:#F5F5F5; padding:20px; border-radius:10px;'>", unsafe_allow_html=True)
-            st.markdown("### 🎁 Etalase Beasiswa Instan")
-            col1, col2, col3 = st.columns(3)
-            with col1:
-                st.info("📚 **Voucher Buku Gramedia**\n\nBiaya: **500 $IGIL**")
-                if st.button("Tukar", key="tukar_1"):
-                    if saldo_saat_ini >= 500:
-                        supabase.table("profil_siswa").update({"saldo_igil": saldo_saat_ini - 500}).eq("id", siswa_id).execute()
-                        st.success("✅ Berhasil! Kode: GRM-IGIL")
-                        time.sleep(1)
-                        st.rerun()
-                    else: st.error("❌ Saldo kurang.")
-            with col2:
-                st.warning("🌐 **Kuota Internet 5GB**\n\nBiaya: **1.000 $IGIL**")
-                if st.button("Tukar", key="tukar_2"):
-                    if saldo_saat_ini >= 1000:
-                        supabase.table("profil_siswa").update({"saldo_igil": saldo_saat_ini - 1000}).eq("id", siswa_id).execute()
-                        st.success("✅ Berhasil!")
-                        time.sleep(1)
-                        st.rerun()
-                    else: st.error("❌ Saldo kurang.")
-            with col3:
-                st.success("🏫 **Subsidi SPP Rp 50k**\n\nBiaya: **5.000 $IGIL**")
-                if st.button("Tukar", key="tukar_3"):
-                    if saldo_saat_ini >= 5000:
-                        supabase.table("profil_siswa").update({"saldo_igil": saldo_saat_ini - 5000}).eq("id", siswa_id).execute()
-                        st.success("✅ Dana dikirim!")
-                        time.sleep(1)
-                        st.rerun()
-                    else: st.error("❌ Saldo kurang.")
-            st.markdown("</div><br>", unsafe_allow_html=True)
+            st.markdown("---")
+    mode_belajar = st.radio("Pilih Sumber Materi:", ["📸 Unggah Foto Buku", "✍️ Pilih Topik (Kurikulum Merdeka)"], horizontal=True)
+
+    col_kelas, col_mapel = st.columns(2)
+    with col_kelas: 
+        jenjang_kelas = st.selectbox("Jenjang & Kelas:", ["SD - Kelas 3"], disabled=True)
+        
+    with col_mapel: 
+        daftar_mapel = ["Matematika", "Bahasa Indonesia", "IPAS (Sains & Sosial)", "Pendidikan Pancasila", "Bahasa Inggris"]
+        mapel = st.selectbox("Mata Pelajaran:", daftar_mapel)
+
+    if mode_belajar == "📸 Unggah Foto Buku":
+        uploaded_files = st.file_uploader("Foto Halaman Buku Pelajaran:", type=["jpg", "jpeg", "png"], accept_multiple_files=True)
+        judul_materi = ""
+    else:
+        bab_kurikulum = {
+            "Matematika": ["Bab 1: Bilangan Cacah sampai 1.000", "Bab 2: Penjumlahan & Pengurangan", "Bab 3: Perkalian & Pembagian", "Bab 4: Pecahan Sederhana", "Bab 5: Pengukuran Waktu, Panjang & Berat", "Bab 6: Bangun Datar"],
+            "Bahasa Indonesia": ["Bab 1: Mari Bermain & Belajar", "Bab 2: Kawan Seiring", "Bab 3: Pengalamanku", "Bab 4: Cuaca di Sekitarku", "Bab 5: Berkomunikasi dengan Baik"],
+            "IPAS (Sains & Sosial)": ["Bab 1: Kenali Hewan di Sekitarku", "Bab 2: Siklus Hidup Makhluk Hidup", "Bab 3: Benda Bersama Kita", "Bab 4: Kenampakan Alam", "Bab 5: Mengenal Lingkungan Sosial"],
+            "Pendidikan Pancasila": ["Bab 1: Aku Anak Indonesia", "Bab 2: Mengenal Lambang Negara", "Bab 3: Hak dan Kewajibanku", "Bab 4: Kebersamaan dalam Keberagaman"],
+            "Bahasa Inggris": ["Unit 1: Hello, My Name Is...", "Unit 2: My Family", "Unit 3: Colors and Shapes", "Unit 4: My House", "Unit 5: Animals"]
+        }
+        
+        pilihan_bab = st.selectbox("Pilih Topik Pembelajaran:", bab_kurikulum[mapel] + ["LAINNYA (Ketik Manual)"])
+        
+        if pilihan_bab == "LAINNYA (Ketik Manual)":
+            judul_materi = st.text_input("Ketik Bab/Topik spesifik:", placeholder="Contoh: Menghitung Luas Lingkaran")
+        else:
+            judul_materi = pilihan_bab
+            
+        uploaded_files = []
 
     st.markdown("---")
     mode_belajar = st.radio("Pilih Sumber Materi:", ["📸 Unggah Foto Buku", "✍️ Pilih/Ketik Topik Materi"], horizontal=True)
