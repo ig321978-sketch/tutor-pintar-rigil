@@ -190,7 +190,7 @@ if koneksi_db_aktif:
 # BANNER STATUS
 st.markdown(f"""
 <div style="background-color: #E0F7FA; padding: 15px 25px; border-radius: 12px; border-left: 8px solid #00BCD4; display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
-    <div><div style="font-size: 16px; font-weight: bold; color: #00838F;">💰 Nilai Beasiswa:</div><div style="font-size: 26px; font-weight: 900; color: #00838F;">{saldo_saat_ini} $IGIL</div></div>
+    <div><div style="font-size: 16px; font-weight: bold; color: #00838F;">💰 Nilai Hadiah:</div><div style="font-size: 26px; font-weight: 900; color: #00838F;">{saldo_saat_ini} $IGIL</div></div>
     <div style="text-align: right;"><div style="font-size: 16px; font-weight: bold; color: #D32F2F;">❤️ Nyawa Belajar:</div><div style="font-size: 26px; font-weight: 900; color: #D32F2F;">{nyawa_saat_ini} / {NYAWA_MAKSIMAL}</div></div>
 </div>
 """, unsafe_allow_html=True)
@@ -210,11 +210,11 @@ tab_belajar, tab_rapor, tab_leaderboard = st.tabs(["📚 Ruang Belajar", "👨�
 # TAB 1: RUANG BELAJAR
 # ==========================================
 with tab_belajar:
-    if st.button("🎁 Tukar Saldo $IGIL Menjadi Beasiswa Instan", use_container_width=True):
+    if st.button("🎁 Tukar Saldo $IGIL Menjadi Hadiah Instan", use_container_width=True):
         st.session_state.tampilkan_toko = not st.session_state.tampilkan_toko
 
     if st.session_state.tampilkan_toko:
-        st.markdown("<div style='background-color:#F5F5F5; padding:20px; border-radius:10px;'>### 🎁 Etalase Beasiswa Instan", unsafe_allow_html=True)
+        st.markdown("<div style='background-color:#F5F5F5; padding:20px; border-radius:10px;'>### 🎁 Etalase Hadiah Instan", unsafe_allow_html=True)
         col1, col2, col3 = st.columns(3)
         with col1:
             st.info("📚 **Voucher Buku Gramedia**\n\nBiaya: **500 $IGIL**")
@@ -231,7 +231,7 @@ with tab_belajar:
                 time.sleep(1)
                 st.rerun()
         with col3:
-            st.success("🏫 **Subsidi SPP Rp 50k**\n\nBiaya: **5.000 $IGIL**")
+            st.success("🏫 **Subsidi Pembayaran Rp 50k**\n\nBiaya: **5.000 $IGIL**")
             if st.button("Tukar", key="tukar_3") and saldo_saat_ini >= 5000:
                 supabase.table("profil_siswa").update({"saldo_igil": saldo_saat_ini - 5000}).eq("id", siswa_id).execute()
                 st.success("✅ Dana dikirim!")
@@ -254,7 +254,6 @@ with tab_belajar:
     
     with col_mapel: 
         daftar_mapel_dinamis = get_mapel_list(jenjang_kelas)
-        # Tambahkan opsi 'LAINNYA' di dropdown Mata Pelajaran
         daftar_mapel_dinamis.append("LAINNYA (ketik disini)")
         
         pilihan_mapel = st.selectbox("Mata Pelajaran:", daftar_mapel_dinamis)
@@ -269,7 +268,6 @@ with tab_belajar:
         judul_materi = ""
     else:
         daftar_bab_dinamis = get_bab_list(jenjang_kelas, mapel)
-        # Tambahkan opsi 'LAINNYA' di dropdown Bab Materi
         daftar_bab_dinamis.append("LAINNYA (ketik disini)")
         
         pilihan_bab = st.selectbox("Pilih Topik/Bab Pembelajaran:", daftar_bab_dinamis)
@@ -309,7 +307,7 @@ with tab_belajar:
                 instruksi_format = """
                 Keluarkan 4 bagian:
                 ===TAG_MATERI=== (Maksimal 3 kata spesifik)
-                ===NASKAH_LAYAR=== (HTML murni, DILARANG LaTeX/MathJax)
+                ===NASKAH_LAYAR=== (HTML murni, DILARANG LaTeX/MathJax. Gunakan struktur paragraf sederhana.)
                 ===NASKAH_SUARA=== (Teks lisan)
                 ===KUIS=== (5 soal. Soal 4: [SIMULASI UJIAN NASIONAL HOTS] Pertanyaan?|||Opsi 1|||Opsi 2|||Opsi 3|||Kunci. Soal 5: [UJIAN LISAN] Pertanyaan?|||LISAN)
                 """
@@ -325,7 +323,11 @@ with tab_belajar:
                         tag_mentah = re.search(r'===TAG_MATERI===(.*?)(?====NASKAH_LAYAR===|$)', full_text, re.DOTALL).group(1).strip().upper()
                         st.session_state.tag_materi = "".join(e for e in tag_mentah if e.isalnum() or e.isspace())
                     
-                    if "===NASKAH_LAYAR===" in full_text: st.session_state.naskah_layar = re.search(r'===NASKAH_LAYAR===(.*?)(?====NASKAH_SUARA===|$)', full_text, re.DOTALL).group(1).strip()
+                    if "===NASKAH_LAYAR===" in full_text: 
+                        # Membersihkan HTML yang tidak perlu agar animasi typewriter lebih stabil
+                        naskah_bersih = re.search(r'===NASKAH_LAYAR===(.*?)(?====NASKAH_SUARA===|$)', full_text, re.DOTALL).group(1).strip()
+                        st.session_state.naskah_layar = naskah_bersih.replace('\n', '<br>')
+                        
                     if "===NASKAH_SUARA===" in full_text:
                         naskah_suara = re.search(r'===NASKAH_SUARA===(.*?)(?====KUIS===|$)', full_text, re.DOTALL).group(1).strip()
                         buat_suara_google(re.sub(r'[*#_`>-]', '', naskah_suara), st.session_state.file_suara, guru_terpilih['voice'], guru_terpilih['pitch'], guru_terpilih['rate'])
@@ -353,15 +355,84 @@ with tab_belajar:
             st.info(f"📈 Kemajuan '{st.session_state.tag_materi.title()}': {penguasaan_materi} / {BATAS_MASTER} Tantangan Dikuasai.")
 
         st.markdown(f"## 🎧 Dengarkan Penjelasan {nama_asli_guru}")
+        
+        # --- BLOK ANIMASI NASKAH & AUDIO (TYPEWRITER EFFECT) ---
         with open(st.session_state.file_suara, "rb") as f: audio_b64 = base64.b64encode(f.read()).decode()
-        components.html(f"""
+        
+        html_typewriter = f"""
         <div style="text-align:center; padding:15px; background:#fff; border-radius:10px; box-shadow:0 2px 8px rgba(0,0,0,0.1); margin-bottom:20px;">
-            <audio controls style="width: 100%;"><source src="data:audio/mp3;base64,{audio_b64}" type="audio/mp3"></audio>
+            <audio id="guruAudio" controls style="width: 100%;">
+                <source src="data:audio/mp3;base64,{audio_b64}" type="audio/mp3">
+            </audio>
+            <p style="font-size:12px; color:#888; margin-top:5px;">Tekan tombol Play untuk mulai mendengarkan penjelasan</p>
         </div>
-        <div style="background-color:#F4FBFF; border-left:6px solid #2AB3FF; padding:25px; border-radius:10px; font-family:sans-serif; font-size:17px; line-height:1.7;">
-            {st.session_state.naskah_layar}
+        
+        <div style="background-color:#F4FBFF; border-left:6px solid #2AB3FF; padding:25px; border-radius:10px; font-family:sans-serif; font-size:17px; line-height:1.7; min-height: 200px;">
+            <div id="typewriterBox"></div>
         </div>
-        """, height=600, scrolling=True)
+
+        <script>
+            // Menyimpan teks HTML utuh dari Gemini
+            const rawHTMLText = `{st.session_state.naskah_layar}`;
+            const targetDiv = document.getElementById("typewriterBox");
+            const audioEl = document.getElementById("guruAudio");
+            
+            let isTyping = false;
+            let typedText = "";
+            let currentIndex = 0;
+            let typingInterval;
+            
+            // Menghitung kecepatan ketikan kotor berdasarkan durasi audio (asumsi 150 kata per menit)
+            // Kecepatan standar di set sekitar 30ms per karakter.
+            const typingSpeedMs = 40; 
+            
+            function typeWriter() {{
+                if (currentIndex < rawHTMLText.length) {{
+                    // Memeriksa apakah karakter saat ini adalah bagian dari tag HTML seperti <b> atau <br>
+                    if (rawHTMLText.charAt(currentIndex) === '<') {{
+                        let tag = "";
+                        while (rawHTMLText.charAt(currentIndex) !== '>' && currentIndex < rawHTMLText.length) {{
+                            tag += rawHTMLText.charAt(currentIndex);
+                            currentIndex++;
+                        }}
+                        tag += '>';
+                        typedText += tag;
+                        currentIndex++;
+                    }} else {{
+                        typedText += rawHTMLText.charAt(currentIndex);
+                        currentIndex++;
+                    }}
+                    targetDiv.innerHTML = typedText;
+                }} else {{
+                    clearInterval(typingInterval);
+                }}
+            }}
+
+            audioEl.addEventListener('play', () => {{
+                if (!isTyping) {{
+                    isTyping = true;
+                    // Reset text
+                    typedText = "";
+                    currentIndex = 0;
+                    targetDiv.innerHTML = "";
+                    typingInterval = setInterval(typeWriter, typingSpeedMs);
+                }}
+            }});
+
+            audioEl.addEventListener('pause', () => {{
+                clearInterval(typingInterval);
+                isTyping = false;
+            }});
+            
+            // Jika audio selesai, munculkan semua teks yang tersisa secara instan
+            audioEl.addEventListener('ended', () => {{
+                clearInterval(typingInterval);
+                targetDiv.innerHTML = rawHTMLText;
+            }});
+        </script>
+        """
+        components.html(html_typewriter, height=500, scrolling=True)
+        # --- AKHIR BLOK ANIMASI ---
 
         st.markdown("---")
         st.markdown(f"## 🏆 Latihan & Dapatkan Hadiah $IGIL!")
