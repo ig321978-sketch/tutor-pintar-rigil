@@ -6,6 +6,7 @@ import json
 import base64
 import uuid
 import os
+import urllib.parse
 from datetime import datetime
 from PIL import Image
 from google import genai
@@ -53,6 +54,7 @@ DATA_GURU = {
 # --- INISIALISASI SESSION STATE LOKAL ---
 if 'berhasil_baca' not in st.session_state: st.session_state.berhasil_baca = False
 if 'tag_materi' not in st.session_state: st.session_state.tag_materi = ""
+if 'img_keyword' not in st.session_state: st.session_state.img_keyword = "education"
 if 'naskah_layar' not in st.session_state: st.session_state.naskah_layar = ""
 if 'file_suara' not in st.session_state: st.session_state.file_suara = "audio_guru.mp3"
 if 'daftar_kuis' not in st.session_state: st.session_state.daftar_kuis = []
@@ -89,7 +91,6 @@ def buat_suara_google(teks, nama_file, nama_suara, pitch_guru, rate_guru):
         with open(nama_file, "wb") as out: out.write(response.audio_content)
         return True
     except Exception as e:
-        print(f"Gagal generate suara: {e}")
         return False
 
 # --- FUNGSI LOGIKA KURIKULUM MERDEKA (DINAMIS) ---
@@ -205,6 +206,34 @@ tab_belajar, tab_rapor, tab_leaderboard = st.tabs(["📚 Ruang Belajar", "👨�
 # TAB 1: RUANG BELAJAR
 # ==========================================
 with tab_belajar:
+    if st.button("🎁 Tukar POINT KAMU Menjadi BEASISWA INSTAN", use_container_width=True):
+        st.session_state.tampilkan_toko = not st.session_state.tampilkan_toko
+    if st.session_state.tampilkan_toko:
+        st.markdown("<div style='background-color:#F5F5F5; padding:20px; border-radius:10px;'>### 🎁 Etalase BEASISWA INSTAN", unsafe_allow_html=True)
+        col1, col2, col3 = st.columns(3)
+        with col1:
+            st.info("📚 **Voucher Buku Gramedia**\n\nBiaya: **500 POINT KAMU**")
+            if st.button("Tukar", key="tukar_1") and saldo_saat_ini >= 500:
+                supabase.table("profil_siswa").update({"saldo_igil": saldo_saat_ini - 500}).eq("id", siswa_id).execute()
+                st.success("✅ Berhasil!")
+                time.sleep(1)
+                st.rerun()
+        with col2:
+            st.warning("🌐 **Kuota Internet 5GB**\n\nBiaya: **1.000 POINT KAMU**")
+            if st.button("Tukar", key="tukar_2") and saldo_saat_ini >= 1000:
+                supabase.table("profil_siswa").update({"saldo_igil": saldo_saat_ini - 1000}).eq("id", siswa_id).execute()
+                st.success("✅ Berhasil!")
+                time.sleep(1)
+                st.rerun()
+        with col3:
+            st.success("🏫 **Subsidi Pembayaran Rp 50k**\n\nBiaya: **5.000 POINT KAMU**")
+            if st.button("Tukar", key="tukar_3") and saldo_saat_ini >= 5000:
+                supabase.table("profil_siswa").update({"saldo_igil": saldo_saat_ini - 5000}).eq("id", siswa_id).execute()
+                st.success("✅ Dana dikirim!")
+                time.sleep(1)
+                st.rerun()
+        st.markdown("</div><br>", unsafe_allow_html=True)
+
     st.markdown("---")
     mode_belajar = st.radio("Pilih Sumber Materi:", ["📸 Unggah Foto Buku", "📑 Pilih Topik (Kurikulum)"], horizontal=True)
 
@@ -253,23 +282,13 @@ with tab_belajar:
             if os.path.exists(st.session_state.file_suara):
                 os.remove(st.session_state.file_suara)
             
-            with st.spinner(f"{nama_asli_guru} sedang menyiapkan UI bergaya Gamma.app untuk {jenjang_kelas}..."):
-                # PERINTAH REVOLUSIONER: Larang AI menggambar! Instruksikan untuk meniru desain Gamma.app
+            with st.spinner(f"{nama_asli_guru} sedang menyiapkan presentasi visual untuk {jenjang_kelas}..."):
+                # REVOLUSI PROMPT: AI dilarang menggunakan CSS rumit yang merusak DOM. Hanya boleh pakai tag HTML dasar (h3, b, br, ul, li)
                 instruksi_format = """
-                Keluarkan 3 bagian secara berurutan:
+                Keluarkan 4 bagian secara berurutan:
                 ===TAG_MATERI=== (Maksimal 3 kata spesifik)
-                ===NASKAH_LAYAR=== 
-                (Tuliskan materi pelajaran SEPERTI SLIDE PRESENTASI GAMMA.APP menggunakan HTML dan in-line CSS.
-                ATURAN WAJIB UI/UX:
-                1. DILARANG KERAS MENGGUNAKAN TAG <img> ATAU MEMINTA GAMBAR EXTERNAL! Ini menyebabkan error.
-                2. Sebagai ganti gambar, gunakan EMOJI RAKSASA (font-size: 60px; text-align: center; display: block; margin: 10px 0;) yang sangat relevan dengan materi.
-                3. Bagi materi ke dalam "Kartu Presentasi" terpisah. Gunakan struktur ini untuk setiap sub-topik:
-                   <div style="background: linear-gradient(135deg, #ffffff, #f4f9fb); border-radius: 16px; padding: 25px; margin-bottom: 25px; box-shadow: 0 8px 16px rgba(0,0,0,0.06); border-left: 6px solid #2AB3FF; font-family: sans-serif;">
-                       <h3 style="color: #00838F; margin-top: 0;">Judul Sub-topik</h3>
-                       [EMOJI RAKSASA]
-                       <p style="color: #444; line-height: 1.8; font-size: 16px;">Teks penjelasan singkat dan padat...</p>
-                   </div>
-                4. Gunakan poin-poin agar mudah dibaca anak-anak. Jangan paragraf blok panjang.)
+                ===KATA_KUNCI_GAMBAR=== (WAJIB: Berikan HANYA 1 KATA BENDA dalam BAHASA INGGRIS untuk foto sampul. Contoh: volcano, microscope, temple. DILARANG lebih dari 2 kata!)
+                ===NASKAH_LAYAR=== (Gunakan HTML dasar untuk mempercantik teks: <h3> untuk Judul Topik, <b> untuk menebalkan kata penting, <br> untuk baris baru. Gunakan poin-poin agar menarik. DILARANG MENGGUNAKAN TAG <img...> atau <div...>. Buat naskah seru seolah presentasi!)
                 ===KUIS=== (5 soal. Soal 4: [SIMULASI UJIAN NASIONAL HOTS] Pertanyaan?|||Opsi 1|||Opsi 2|||Opsi 3|||Kunci. Soal 5: [UJIAN LISAN] Pertanyaan?|||LISAN)
                 """
                 payload_ai = [f"Kamu Tutor AI {mapel} bernama {nama_asli_guru}. Susun materi: '{judul_materi}' untuk {nama_siswa} kelas {jenjang_kelas}. Sesuaikan gaya bahasa.\n\n{instruksi_format}"]
@@ -281,12 +300,16 @@ with tab_belajar:
                     full_text = response.text
                     
                     if "===TAG_MATERI===" in full_text:
-                        tag_mentah = re.search(r'===TAG_MATERI===(.*?)(?====NASKAH_LAYAR===|$)', full_text, re.DOTALL).group(1).strip().upper()
-                        st.session_state.tag_materi = "".join(e for e in tag_mentah if e.isalnum() or e.isspace())
+                        tag_mentah = re.search(r'===TAG_MATERI===(.*?)(?====KATA_KUNCI_GAMBAR===|===NASKAH_LAYAR===|$)', full_text, re.DOTALL)
+                        if tag_mentah: st.session_state.tag_materi = "".join(e for e in tag_mentah.group(1).strip().upper() if e.isalnum() or e.isspace())
+                        
+                    if "===KATA_KUNCI_GAMBAR===" in full_text:
+                        keyword_mentah = re.search(r'===KATA_KUNCI_GAMBAR===(.*?)(?====NASKAH_LAYAR===|$)', full_text, re.DOTALL)
+                        if keyword_mentah: st.session_state.img_keyword = re.sub(r'[^a-zA-Z0-9\s]', '', keyword_mentah.group(1).strip())
                     
                     if "===NASKAH_LAYAR===" in full_text: 
                         naskah_kotor = re.search(r'===NASKAH_LAYAR===(.*?)(?====KUIS===|$)', full_text, re.DOTALL).group(1).strip()
-                        st.session_state.naskah_layar = naskah_kotor.replace('\n', '') # Mencegah enter merusak struktur HTML card
+                        st.session_state.naskah_layar = naskah_kotor.replace('\n', '<br>')
                         
                         teks_suara_murni = re.sub(r'<[^>]+>', '', naskah_kotor) 
                         teks_suara_murni = re.sub(r'[*#_`>-]', '', teks_suara_murni) 
@@ -323,37 +346,52 @@ with tab_belajar:
 
         st.markdown(f"## 🎧 Dengarkan Penjelasan {nama_asli_guru}")
         
-        audio_tersedia = os.path.exists(st.session_state.file_suara)
+        # --- DESAIN KARTU PRESENTASI GAMMA.APP ---
+        # 1. Mendapatkan Gambar Fotografi Profesional
+        keyword_aman = urllib.parse.quote(st.session_state.img_keyword)
+        url_gambar_hd = f"https://image.pollinations.ai/prompt/{keyword_aman}%20highly%20detailed%20beautiful%20educational%20photography%20no%20text?width=800&height=400&nologo=true"
         
+        audio_tersedia = os.path.exists(st.session_state.file_suara)
         if audio_tersedia:
             with open(st.session_state.file_suara, "rb") as f: audio_b64 = base64.b64encode(f.read()).decode()
-            audio_html_element = f"""
-            <div style="text-align:center; padding:15px; background:#fff; border-radius:10px; box-shadow:0 2px 8px rgba(0,0,0,0.1); margin-bottom:20px;">
-                <audio id="guruAudio" controls style="width: 100%;">
-                    <source src="data:audio/mp3;base64,{audio_b64}" type="audio/mp3">
-                </audio>
-                <p style="font-size:12px; color:#888; margin-top:5px;">Tekan tombol Play untuk mulai mendengarkan penjelasan</p>
-            </div>
-            """
+            audio_tag = f'<audio id="guruAudio" controls style="width: 100%; max-width: 400px; margin-top: 15px;"><source src="data:audio/mp3;base64,{audio_b64}" type="audio/mp3"></audio>'
             script_trigger = "audioEl.addEventListener('play', () => {"
+            petunjuk_teks = "▶️ Tekan Play untuk memulai penjelasan"
         else:
-            audio_html_element = """
-            <div style="text-align:center; padding:15px; background:#E3F2FD; border-radius:10px; border: 1px solid #90CAF9; margin-bottom:20px;">
-                <p style="color: #1565C0; margin:0; font-weight:bold;">✨ Tampilan Mode Presentasi ✍️</p>
-                <p style="font-size:13px; color:#1565C0; margin-top:5px;">Sistem sedang menyusun naskah presentasi bergaya Gamma untukmu...</p>
-            </div>
-            """
+            audio_tag = '<p style="color: #E65100; margin:10px 0 0 0; font-weight:bold;">⚠️ Fitur Suara Guru AI Belum Aktif</p>'
             script_trigger = "setTimeout(() => {"
-            
+            petunjuk_teks = "Sistem sedang menampilkan naskah belajar otomatis..."
+
         safe_html = st.session_state.naskah_layar.replace('\\', '\\\\').replace('`', '\\`').replace('$', '\\$')
         
-        # Desain Container dihilangkan bordernya agar "Card" (kartu) buatan AI bisa terlihat menonjol dan elegan
         html_typewriter = f"""
-        {audio_html_element}
-        
-        <div id="scrollContainer" style="padding:10px; height: 500px; overflow-y: auto; scroll-behavior: smooth; position: relative; background-color: #fcfcfc;">
-            <div id="typewriterBox"></div>
+        <div style="background-color:#ffffff; border-radius:16px; box-shadow: 0 8px 24px rgba(0,0,0,0.08); overflow:hidden; font-family:sans-serif; border: 1px solid #eaeaea; margin-bottom: 30px;">
+            
+            <!-- GAMBAR BANNER (Render statis agar tidak rusak oleh JS) -->
+            <div style="width:100%; height:250px; background-image:url('{url_gambar_hd}'); background-size:cover; background-position:center; border-bottom: 4px solid #2AB3FF; position: relative;">
+                <div style="position: absolute; bottom: 10px; right: 10px; background: rgba(0,0,0,0.6); color: white; padding: 4px 10px; border-radius: 20px; font-size: 11px;">Materi: {st.session_state.img_keyword.title()}</div>
+            </div>
+            
+            <!-- KONTROL SUARA -->
+            <div style="padding: 15px 25px; background-color: #fcfcfc; border-bottom: 1px solid #eee; text-align: center;">
+                {audio_tag}
+                <p style="font-size:13px; color:#666; margin-top: 5px;">{petunjuk_teks}</p>
+            </div>
+            
+            <!-- WADAH TEKS ANIMASI -->
+            <div id="scrollContainer" style="padding: 30px 40px; height: 350px; overflow-y: auto; scroll-behavior: smooth;">
+                <div id="typewriterBox"></div>
+            </div>
         </div>
+
+        <style>
+            /* STYLING CSS UNTUK MENJADIKAN TEKS TERLIHAT PREMIUM (ALGORITMA GAMMA.APP) */
+            #typewriterBox {{ color: #333; font-size: 17px; line-height: 1.8; }}
+            #typewriterBox h3 {{ color: #0277BD; font-size: 24px; margin-top: 15px; margin-bottom: 10px; border-bottom: 2px solid #E1F5FE; padding-bottom: 5px; }}
+            #typewriterBox b {{ color: #C62828; background-color: #FFEBEE; padding: 2px 6px; border-radius: 4px; }}
+            #typewriterBox ul {{ background: #f9f9f9; padding: 15px 15px 15px 35px; border-radius: 8px; border-left: 4px solid #4CAF50; }}
+            #typewriterBox li {{ margin-bottom: 8px; }}
+        </style>
 
         <script>
             const rawHTMLText = `{safe_html}`;
@@ -366,8 +404,7 @@ with tab_belajar:
             let currentIndex = 0;
             let typingInterval;
             
-            // Kecepatan disetel lebih moderat (60ms) agar kotak presentasi tidak terlalu lama munculnya
-            const typingSpeedMs = 60; 
+            const typingSpeedMs = 110; 
             
             function typeWriter() {{
                 if (currentIndex < rawHTMLText.length) {{
@@ -402,20 +439,12 @@ with tab_belajar:
             {'});' if audio_tersedia else '}, 1000);'}
 
             if(audioEl) {{
-                audioEl.addEventListener('pause', () => {{
-                    clearInterval(typingInterval);
-                    isTyping = false;
-                }});
-                
-                audioEl.addEventListener('ended', () => {{
-                    clearInterval(typingInterval);
-                    targetDiv.innerHTML = rawHTMLText;
-                    setTimeout(() => {{ scrollContainer.scrollTop = scrollContainer.scrollHeight; }}, 100);
-                }});
+                audioEl.addEventListener('pause', () => {{ clearInterval(typingInterval); isTyping = false; }});
+                audioEl.addEventListener('ended', () => {{ clearInterval(typingInterval); targetDiv.innerHTML = rawHTMLText; setTimeout(() => {{ scrollContainer.scrollTop = scrollContainer.scrollHeight; }}, 100); }});
             }}
         </script>
         """
-        components.html(html_typewriter, height=620)
+        components.html(html_typewriter, height=750)
 
         st.markdown("---")
         st.markdown(f"## 🏆 Latihan & Dapatkan POINT KAMU!")
