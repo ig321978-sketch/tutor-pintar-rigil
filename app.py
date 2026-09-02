@@ -6,6 +6,7 @@ import json
 import base64
 import uuid
 import os
+import urllib.parse
 from datetime import datetime
 from PIL import Image
 from google import genai
@@ -207,6 +208,34 @@ tab_belajar, tab_rapor, tab_leaderboard = st.tabs(["📚 Ruang Belajar", "👨�
 # TAB 1: RUANG BELAJAR
 # ==========================================
 with tab_belajar:
+    if st.button("🎁 Tukar POINT KAMU Menjadi BEASISWA INSTAN", use_container_width=True):
+        st.session_state.tampilkan_toko = not st.session_state.tampilkan_toko
+    if st.session_state.tampilkan_toko:
+        st.markdown("<div style='background-color:#F5F5F5; padding:20px; border-radius:10px;'>### 🎁 Etalase BEASISWA INSTAN", unsafe_allow_html=True)
+        col1, col2, col3 = st.columns(3)
+        with col1:
+            st.info("📚 **Voucher Buku Gramedia**\n\nBiaya: **500 POINT KAMU**")
+            if st.button("Tukar", key="tukar_1") and saldo_saat_ini >= 500:
+                supabase.table("profil_siswa").update({"saldo_igil": saldo_saat_ini - 500}).eq("id", siswa_id).execute()
+                st.success("✅ Berhasil!")
+                time.sleep(1)
+                st.rerun()
+        with col2:
+            st.warning("🌐 **Kuota Internet 5GB**\n\nBiaya: **1.000 POINT KAMU**")
+            if st.button("Tukar", key="tukar_2") and saldo_saat_ini >= 1000:
+                supabase.table("profil_siswa").update({"saldo_igil": saldo_saat_ini - 1000}).eq("id", siswa_id).execute()
+                st.success("✅ Berhasil!")
+                time.sleep(1)
+                st.rerun()
+        with col3:
+            st.success("🏫 **Subsidi Pembayaran Rp 50k**\n\nBiaya: **5.000 POINT KAMU**")
+            if st.button("Tukar", key="tukar_3") and saldo_saat_ini >= 5000:
+                supabase.table("profil_siswa").update({"saldo_igil": saldo_saat_ini - 5000}).eq("id", siswa_id).execute()
+                st.success("✅ Dana dikirim!")
+                time.sleep(1)
+                st.rerun()
+        st.markdown("</div><br>", unsafe_allow_html=True)
+
     st.markdown("---")
     mode_belajar = st.radio("Pilih Sumber Materi:", ["📸 Unggah Foto Buku", "📑 Pilih Topik (Kurikulum)"], horizontal=True)
 
@@ -256,24 +285,22 @@ with tab_belajar:
             if os.path.exists(st.session_state.file_suara):
                 os.remove(st.session_state.file_suara)
             
-            with st.spinner(f"{nama_asli_guru} sedang menyusun materi dan memanggil pelukis AI Imagen 3..."):
-                
-                # LANGKAH 1: Gemini 1.5 Flash membuat naskah dan mengekstrak Prompt Gambar
+            with st.spinner(f"{nama_asli_guru} sedang menyusun presentasi bergaya Gamma dan menyiapkan Imagen 3..."):
                 instruksi_format = """
                 Keluarkan 4 bagian berurutan:
-                ===TAG_MATERI=== (Maksimal 3 kata)
-                ===PROMPT_GAMBAR=== (WAJIB: Tuliskan deskripsi inti visual dalam BAHASA INGGRIS, fokus pada objek, latar, pencahayaan, sesuai materi. DILARANG bahasa Indonesia.)
+                ===TAG_MATERI=== (Maksimal 3 kata spesifik)
+                ===PROMPT_GAMBAR=== (WAJIB: Tuliskan prompt deskripsi ilustrasi super detail dalam BAHASA INGGRIS. Contoh: "A highly detailed, beautiful illustration of a volcano erupting, educational textbook style, bright colors, no text, no words". DILARANG bahasa Indonesia, DILARANG ada teks dalam gambar.)
                 ===NASKAH_LAYAR=== 
-                (Tuliskan materi pelajaran SEPERTI SLIDE PRESENTASI menggunakan HTML. DILARANG memasukkan tag <img> di sini. 
-                Gunakan struktur "Kartu" seperti ini:
+                (Tuliskan materi SEPERTI SLIDE PRESENTASI menggunakan HTML. DILARANG memasukkan tag <img> di sini. 
+                Gunakan struktur "Kartu" ini untuk setiap sub-topik:
                    <div style="background: linear-gradient(135deg, #ffffff, #f4f9fb); border-radius: 16px; padding: 25px; margin-bottom: 25px; box-shadow: 0 8px 16px rgba(0,0,0,0.06); border-left: 6px solid #2AB3FF; font-family: sans-serif;">
                        <h3 style="color: #00838F; margin-top: 0;">Judul Sub-topik</h3>
-                       <p style="color: #444; line-height: 1.8; font-size: 16px;">Penjelasan...</p>
+                       <p style="color: #444; line-height: 1.8; font-size: 16px;">Penjelasan poin...</p>
                    </div>
                 )
                 ===KUIS=== (5 soal. Soal 4: [SIMULASI UJIAN NASIONAL HOTS] Pertanyaan?|||Opsi 1|||Opsi 2|||Opsi 3|||Kunci. Soal 5: [UJIAN LISAN] Pertanyaan?|||LISAN)
                 """
-                payload_ai = [f"Kamu Tutor AI {mapel} bernama {nama_asli_guru}. Susun materi: '{judul_materi}' untuk {nama_siswa} kelas {jenjang_kelas}.\n\n{instruksi_format}"]
+                payload_ai = [f"Kamu Tutor AI {mapel}. Susun materi: '{judul_materi}' untuk {nama_siswa} kelas {jenjang_kelas}.\n\n{instruksi_format}"]
                 if mode_belajar == "📸 Unggah Foto Buku":
                     payload_ai = [f"Kamu Tutor AI {mapel}. Baca foto buku ini untuk {nama_siswa} kelas {jenjang_kelas}.\n\n{instruksi_format}"] + [Image.open(f) for f in uploaded_files]
 
@@ -291,7 +318,8 @@ with tab_belajar:
                     
                     if "===NASKAH_LAYAR===" in full_text: 
                         naskah_kotor = re.search(r'===NASKAH_LAYAR===(.*?)(?====KUIS===|$)', full_text, re.DOTALL).group(1).strip()
-                        st.session_state.naskah_layar = naskah_kotor.replace('\n', '')
+                        # PERBAIKAN PENTING: Ganti enter menjadi spasi, bukan dihilangkan agar kata tidak menyatu.
+                        st.session_state.naskah_layar = naskah_kotor.replace('\n', ' ')
                         
                         teks_suara_murni = re.sub(r'<[^>]+>', '', naskah_kotor) 
                         teks_suara_murni = re.sub(r'[*#_`>-]', '', teks_suara_murni) 
@@ -308,13 +336,11 @@ with tab_belajar:
                 except Exception as e: 
                     st.error(f"Gagal memproses Teks AI: {e}")
 
-            # LANGKAH 2: Menggunakan IMAGEN 3 dari Kode Anda
+            # LANGKAH 2: IMAGEN 3
             if hasattr(st.session_state, 'img_prompt') and st.session_state.img_prompt:
-                with st.spinner("Sedang menggambar sketsa dengan Google Imagen 3..."):
+                with st.spinner("Mengeksekusi kode pelukis Google Imagen 3 untuk gambar kualitas wahid..."):
                     try:
-                        # Menambahkan gaya spesifik (seperti kode Anda)
-                        prompt_sketsa = f"{st.session_state.img_prompt}, rough pencil sketch style, black and white, educational textbook art, clean background, completely no text"
-                        
+                        prompt_sketsa = f"{st.session_state.img_prompt}, beautiful educational textbook art, perfectly drawn, NO TEXT, NO LETTERS, completely text-free"
                         respons_gambar = client_gemini.models.generate_images(
                             model='imagen-3.0-generate-001',
                             prompt=prompt_sketsa,
@@ -324,26 +350,18 @@ with tab_belajar:
                                 output_mime_type="image/jpeg"
                             )
                         )
-                        
-                        # Mengambil byte gambar dan mengonversinya ke Base64 untuk ditampilkan di Web
                         gambar_bytes = respons_gambar.generated_images[0].image.image_bytes
                         img_b64 = base64.b64encode(gambar_bytes).decode('utf-8')
                         
                         st.session_state.img_html_final = f"""
                         <div style="text-align: center; margin-bottom: 25px;">
-                            <img src="data:image/jpeg;base64,{img_b64}" style="width: 100%; max-width: 450px; border-radius: 12px; border: 2px solid #555; box-shadow: 0 4px 10px rgba(0,0,0,0.1);">
-                            <p style="font-size: 13px; color: #555; margin-top: 10px; font-style: italic;">🎨 Sketsa Edukasi AI (Imagen 3)</p>
+                            <img src="data:image/jpeg;base64,{img_b64}" style="width: 100%; max-width: 500px; border-radius: 12px; border: 2px solid #ddd; box-shadow: 0 4px 10px rgba(0,0,0,0.15);">
+                            <p style="font-size: 13px; color: #555; margin-top: 10px; font-style: italic;">🎨 Ilustrasi Premium (Imagen 3)</p>
                         </div>
                         """
                     except Exception as img_error:
-                        print(f"Gagal memanggil Imagen 3: {img_error}")
-                        # JIKA IMAGEN 3 GAGAL (Mungkin karena Billing belum diatur), tampilkan Peringatan Santun
-                        st.session_state.img_html_final = f"""
-                        <div style="text-align: center; padding: 15px; background: #FFF3E0; border-radius: 10px; border: 1px dashed #FFB74D; margin-bottom: 25px;">
-                            <p style="color: #E65100; margin: 0; font-weight: bold;">⚠️ Gambar Sketsa Premium Tidak Muncul</p>
-                            <p style="color: #E65100; font-size: 13px; margin-top: 5px;">Akses Imagen 3 ditolak oleh Google. Pastikan Kunci API Anda berasal dari proyek yang sudah mengaktifkan "Billing" (Kartu Kredit/Debit) di Google Cloud Console.</p>
-                        </div>
-                        """
+                        # Jika Imagen gagal, biarkan kosong tanpa pesan error yang mengganggu
+                        st.session_state.img_html_final = ""
 
             st.session_state.berhasil_baca = True
             st.rerun()
@@ -367,7 +385,6 @@ with tab_belajar:
         st.markdown(f"## 🎧 Dengarkan Penjelasan {nama_asli_guru}")
         
         audio_tersedia = os.path.exists(st.session_state.file_suara)
-        
         if audio_tersedia:
             with open(st.session_state.file_suara, "rb") as f: audio_b64 = base64.b64encode(f.read()).decode()
             audio_html_element = f"""
@@ -382,15 +399,16 @@ with tab_belajar:
         else:
             audio_html_element = """
             <div style="text-align:center; padding:15px; background:#E3F2FD; border-radius:10px; border: 1px solid #90CAF9; margin-bottom:20px;">
-                <p style="color: #1565C0; margin:0; font-weight:bold;">✨ Tampilan Mode Presentasi ✍️</p>
-                <p style="font-size:13px; color:#1565C0; margin-top:5px;">Sistem sedang menyusun naskah bergaya Gamma untukmu...</p>
+                <p style="color: #1565C0; margin:0; font-weight:bold;">✨ Mode Presentasi Cerdas ✍️</p>
+                <p style="font-size:13px; color:#1565C0; margin-top:5px;">Sistem sedang menyusun naskah visual untukmu...</p>
             </div>
             """
             script_trigger = "setTimeout(() => {"
             
-        # Menggabungkan Gambar Imagen 3 + Teks Materi UI Gamma
         naskah_gabungan = st.session_state.get('img_html_final', '') + st.session_state.naskah_layar
-        safe_html = naskah_gabungan.replace('\\', '\\\\').replace('`', '\\`').replace('$', '\\$')
+        
+        # PERBAIKAN FATAL JAVASCRIPT: Menggunakan JSON.dumps agar tidak error/nge-blank
+        safe_js_string = json.dumps(naskah_gabungan)
         
         html_typewriter = f"""
         {audio_html_element}
@@ -400,7 +418,8 @@ with tab_belajar:
         </div>
 
         <script>
-            const rawHTMLText = `{safe_html}`;
+            // Mengambil string HTML yang 100% aman dari Python
+            const rawHTMLText = {safe_js_string};
             const targetDiv = document.getElementById("typewriterBox");
             const scrollContainer = document.getElementById("scrollContainer");
             const audioEl = document.getElementById("guruAudio");
@@ -413,25 +432,31 @@ with tab_belajar:
             const typingSpeedMs = 60; 
             
             function typeWriter() {{
-                if (currentIndex < rawHTMLText.length) {{
-                    if (rawHTMLText.charAt(currentIndex) === '<') {{
-                        let tag = "";
-                        while (rawHTMLText.charAt(currentIndex) !== '>' && currentIndex < rawHTMLText.length) {{
-                            tag += rawHTMLText.charAt(currentIndex);
-                            currentIndex++;
-                        }}
-                        tag += '>';
-                        typedText += tag;
-                        currentIndex++;
-                    }} else {{
-                        typedText += rawHTMLText.charAt(currentIndex);
+                if (currentIndex >= rawHTMLText.length) {{
+                    clearInterval(typingInterval);
+                    return;
+                }}
+
+                // PERBAIKAN LOGIKA: Mengeksekusi seluruh tag HTML (kode desain) secara INSTAN (0 detik)
+                while (currentIndex < rawHTMLText.length && rawHTMLText.charAt(currentIndex) === '<') {{
+                    let tag = "";
+                    while (currentIndex < rawHTMLText.length && rawHTMLText.charAt(currentIndex) !== '>') {{
+                        tag += rawHTMLText.charAt(currentIndex);
                         currentIndex++;
                     }}
-                    targetDiv.innerHTML = typedText;
-                    scrollContainer.scrollTop = scrollContainer.scrollHeight;
-                }} else {{
-                    clearInterval(typingInterval);
+                    tag += '>';
+                    typedText += tag;
+                    currentIndex++;
                 }}
+
+                // Setelah kode HTML instan terlewati, baru ketik 1 huruf materinya dengan lambat
+                if (currentIndex < rawHTMLText.length) {{
+                    typedText += rawHTMLText.charAt(currentIndex);
+                    currentIndex++;
+                }}
+
+                targetDiv.innerHTML = typedText;
+                scrollContainer.scrollTop = scrollContainer.scrollHeight;
             }}
 
             {script_trigger}
@@ -539,7 +564,8 @@ with tab_belajar:
                                 if not is_lulus and koneksi_db_aktif:
                                     supabase.table("profil_siswa").update({"saldo_igil": saldo_saat_ini + 100}).eq("id", siswa_id).execute()
                                     supabase.table("histori_belajar").insert({"siswa_id": siswa_id, "mapel": mapel, "bab": st.session_state.tag_materi.title(), "skor": 100, "status_lulus": True}).execute()
-                                    if not is_lulus and penguasaan_materi + 1 >= BATAS_MASTER: st.balloons()
+                                    if not is_lulus and penguasaan_materi + 1 >= BATAS_MASTER: 
+                                        st.balloons()
                                 st.rerun()
                         else:
                             st.error(f"❌ **GAGAL/TIMEOUT! Nyawa berkurang 1.**\n\nAlasan AI: {hasil_teks}")
