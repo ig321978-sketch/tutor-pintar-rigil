@@ -17,60 +17,82 @@ from supabase import create_client, Client
 BATAS_MASTER = 5 
 NYAWA_MAKSIMAL = 3
 
-st.set_page_config(page_title="$IGIL - Learn to Earn", page_icon="🎓", layout="centered")
-# --- KOSMETIK & CSS UI ---
+# --- KOSMETIK UI: TEMA NEON (PUTIH, HIJAU STABILO, UNGU GELAP) ---
 st.markdown("""
     <style>
-        /* Mengubah warna latar belakang utama menjadi ceria (biru muda pastel) */
+        /* 1. Latar Belakang PUTIH Bersih */
         .stApp {
-            background-color: #F0F8FF; 
+            background-color: #FFFFFF; 
         }
         
-        /* Merapikan Font & Header */
-        h1, h2, h3 {
-            color: #2C3E50;
-            font-family: 'Comic Sans MS', 'Fredoka One', cursive, sans-serif;
-            text-align: center;
+        /* 2. Semua Teks berwarna UNGU GELAP */
+        html, body, p, h1, h2, h3, h4, h5, h6, span, label, div {
+            color: #301934 !important;
+            font-family: 'Arial', sans-serif;
         }
 
-        /* Mempercantik Tombol (Lebih bulat dan berwarna menarik) */
+        /* 3. Tombol Utama (HIJAU STABILO) & Teks (UNGU GELAP) */
         .stButton>button {
-            background-color: #FF9800; /* Warna Oranye Ceria */
-            color: white;
-            border-radius: 20px;
-            border: none;
+            background-color: #39FF14 !important; /* Hijau Stabilo */
+            color: #301934 !important; /* Ungu Gelap */
+            border-radius: 8px;
+            border: 2px solid #301934 !important; /* Garis tepi ungu gelap */
             padding: 10px 24px;
             font-size: 16px;
-            font-weight: bold;
-            box-shadow: 0px 4px 6px rgba(0,0,0,0.1);
-            transition: 0.3s;
+            font-weight: 900; /* Ditebalkan agar kontras */
+            text-transform: uppercase;
+            box-shadow: 3px 3px 0px #301934; /* Bayangan solid gaya retro/Web3 */
+            transition: all 0.2s ease-in-out;
         }
         
+        /* Efek saat tombol disentuh/diklik */
         .stButton>button:hover {
-            background-color: #E68A00;
-            transform: scale(1.05); /* Efek membesar saat disentuh */
+            transform: translate(2px, 2px);
+            box-shadow: 1px 1px 0px #301934;
         }
 
-        /* Mempercantik Kotak Input Teks */
+        /* 4. Kotak Input Teks */
         .stTextInput>div>div>input {
-            border-radius: 15px;
-            border: 2px solid #4CAF50;
+            border-radius: 8px;
+            border: 2px solid #301934 !important;
+            background-color: #FFFFFF !important;
+            color: #301934 !important;
+            font-weight: bold;
         }
 
-        /* Merapikan Tabs (Ruang Belajar, Rapor, Papan Peringkat) */
+        /* 5. Desain Kotak Pesan (Info, Warning, Success) */
+        .stAlert {
+            background-color: #FFFFFF !important;
+            border: 2px solid #39FF14 !important; /* Garis Stabilo */
+            color: #301934 !important;
+            border-radius: 8px;
+            box-shadow: 2px 2px 0px #301934;
+        }
+
+        /* 6. Tabs Navigasi (Ruang Belajar, Rapor, dsb) */
         .stTabs [data-baseweb="tab-list"] {
             gap: 10px;
-            justify-content: center;
         }
         .stTabs [data-baseweb="tab"] {
-            border-radius: 10px 10px 0px 0px;
-            background-color: #E0E0E0;
-            padding: 10px 20px;
+            border-radius: 8px 8px 0px 0px;
+            background-color: #FFFFFF !important;
+            border: 2px solid #301934 !important;
+            border-bottom: none !important;
         }
+        /* Tab yang Sedang Aktif */
         .stTabs [aria-selected="true"] {
-            background-color: #4CAF50 !important; /* Hijau saat tab aktif */
-            color: white !important;
-            font-weight: bold;
+            background-color: #39FF14 !important; /* Hijau Stabilo */
+            color: #301934 !important;
+            font-weight: 900;
+        }
+        
+        /* 7. Radio Button & Select Box */
+        div[role="radiogroup"] label {
+            background-color: #FFFFFF;
+            border: 2px solid #301934;
+            border-radius: 5px;
+            padding: 5px 10px;
+            margin-right: 5px;
         }
     </style>
 """, unsafe_allow_html=True)
