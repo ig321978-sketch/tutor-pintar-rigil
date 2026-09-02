@@ -135,7 +135,6 @@ penguasaan_materi = 0
 
 if koneksi_db_aktif:
     try:
-        # 1. Ambil atau Buat Profil Baru
         profil_resp = supabase.table("profil_siswa").select("*").eq("id", siswa_id).execute()
         if not profil_resp.data:
             profil_baru = {"id": siswa_id, "nama": nama_siswa, "jenjang_kelas": "Belum Diatur", "saldo_igil": 0, "nyawa_belajar": NYAWA_MAKSIMAL}
@@ -144,16 +143,13 @@ if koneksi_db_aktif:
             saldo_saat_ini = profil_resp.data[0]["saldo_igil"]
             nyawa_saat_ini = profil_resp.data[0]["nyawa_belajar"]
             
-        # 2. Ambil Histori Belajar untuk Rapor
         histori_resp = supabase.table("histori_belajar").select("*").eq("siswa_id", siswa_id).order("created_at", desc=True).execute()
         data_histori_db = histori_resp.data
         
-        # 3. Hitung Progres Penguasaan Topik Saat Ini (Anti-Farming)
         if st.session_state.tag_materi:
             progres_resp = supabase.table("histori_belajar").select("id").eq("siswa_id", siswa_id).eq("bab", st.session_state.tag_materi).execute()
             penguasaan_materi = len(progres_resp.data)
             
-        # 4. Ambil Data Papan Peringkat Nasional
         lb_resp = supabase.table("profil_siswa").select("nama, saldo_igil").order("saldo_igil", desc=True).limit(10).execute()
         data_leaderboard_db = lb_resp.data
         
@@ -174,7 +170,6 @@ st.markdown(f"""
 </div>
 """, unsafe_allow_html=True)
 
-# Logika Pembelian Nyawa ke Database
 if nyawa_saat_ini <= 0:
     st.error("💔 Yaah! Nyawa belajarmu habis karena terlalu banyak menjawab salah.")
     if st.button("💊 Beli 3 Nyawa (Harga: 50 $IGIL)"):
@@ -188,11 +183,10 @@ if nyawa_saat_ini <= 0:
             st.warning("Saldo $IGIL mu tidak cukup. Kembalilah besok!")
     st.stop() 
 
-# --- NAVIGASI TAB ---
 tab_belajar, tab_rapor, tab_leaderboard = st.tabs(["📚 Ruang Belajar", "👨‍👩‍👧 Rapor Anak", "🏆 Papan Peringkat"])
 
 # ==========================================
-# TAB 1: RUANG BELAJAR (VERSI KOMERSIAL)
+# TAB 1: RUANG BELAJAR (KURIKULUM DINAMIS)
 # ==========================================
 with tab_belajar:
     if st.button("🎁 Tukar Saldo $IGIL Menjadi Beasiswa Instan", use_container_width=True):
@@ -208,10 +202,9 @@ with tab_belajar:
                 if st.button("Tukar", key="tukar_1"):
                     if saldo_saat_ini >= 500:
                         supabase.table("profil_siswa").update({"saldo_igil": saldo_saat_ini - 500}).eq("id", siswa_id).execute()
-                        st.success("✅ Berhasil! Kode: GRM-IGIL")
+                        st.success("✅ Berhasil!")
                         time.sleep(1)
                         st.rerun()
-                    else: st.error("❌ Saldo kurang.")
             with col2:
                 st.warning("🌐 **Kuota Internet 5GB**\n\nBiaya: **1.000 $IGIL**")
                 if st.button("Tukar", key="tukar_2"):
@@ -220,7 +213,6 @@ with tab_belajar:
                         st.success("✅ Berhasil!")
                         time.sleep(1)
                         st.rerun()
-                    else: st.error("❌ Saldo kurang.")
             with col3:
                 st.success("🏫 **Subsidi SPP Rp 50k**\n\nBiaya: **5.000 $IGIL**")
                 if st.button("Tukar", key="tukar_3"):
@@ -229,11 +221,10 @@ with tab_belajar:
                         st.success("✅ Dana dikirim!")
                         time.sleep(1)
                         st.rerun()
-                    else: st.error("❌ Saldo kurang.")
             st.markdown("</div><br>", unsafe_allow_html=True)
 
     st.markdown("---")
-    mode_belajar = st.radio("Pilih Sumber Materi:", ["📸 Unggah Foto Buku", "✍️ Ketik Topik Materi Bebas"], horizontal=True)
+    mode_belajar = st.radio("Pilih Sumber Materi:", ["📸 Unggah Foto Buku", "📑 Pilih Topik (Kurikulum)"], horizontal=True)
 
     col_kelas, col_mapel = st.columns(2)
     with col_kelas: 
@@ -242,25 +233,60 @@ with tab_belajar:
             ["SD - Kelas 1", "SD - Kelas 2", "SD - Kelas 3", "SD - Kelas 4", "SD - Kelas 5", "SD - Kelas 6", 
              "SMP - Kelas 7", "SMP - Kelas 8", "SMP - Kelas 9", 
              "SMA - Kelas 10", "SMA - Kelas 11", "SMA - Kelas 12"], 
-            index=2 # Default di Kelas 3 SD untuk kemudahan jagoan Anda
+            index=2
         )
         
+    # --- LOGIKA MATA PELAJARAN DINAMIS ---
+    jenjang_inti = jenjang_kelas.split(" - ")[0] 
+    
     with col_mapel: 
-        daftar_mapel = ["Matematika", "Bahasa Indonesia", "IPA / IPAS", "IPS", "Pendidikan Pancasila", "Bahasa Inggris", "Lainnya"]
+        if jenjang_inti == "SD":
+            daftar_mapel = ["Matematika", "Bahasa Indonesia", "IPAS", "Pendidikan Pancasila", "Bahasa Inggris", "Seni Budaya"]
+        elif jenjang_inti == "SMP":
+            daftar_mapel = ["Matematika", "Bahasa Indonesia", "IPA", "IPS", "Pendidikan Pancasila", "Bahasa Inggris", "Informatika"]
+        else: # SMA
+            daftar_mapel = ["Matematika", "Bahasa Indonesia", "Fisika", "Kimia", "Biologi", "Geografi", "Ekonomi", "Sosiologi", "Sejarah", "Pendidikan Pancasila", "Bahasa Inggris", "Informatika"]
+            
         mapel = st.selectbox("Mata Pelajaran:", daftar_mapel)
 
     if mode_belajar == "📸 Unggah Foto Buku":
         uploaded_files = st.file_uploader("Foto Halaman Buku Pelajaran:", type=["jpg", "jpeg", "png"], accept_multiple_files=True)
         judul_materi = ""
     else:
-        judul_materi = st.text_input(
-            "Topik/Bab Materi yang Ingin Dipelajari:", 
-            placeholder="Contoh: Pecahan Sederhana, Siklus Air, dll."
-        )
+        # --- DATABASE BAB KURIKULUM MERDEKA ---
+        bab_db = {
+            "SD - Kelas 3": {
+                "Matematika": ["Bab 1: Bilangan Cacah sampai 1.000", "Bab 2: Penjumlahan & Pengurangan", "Bab 3: Perkalian & Pembagian", "Bab 4: Pecahan Sederhana", "Bab 5: Pengukuran Waktu, Panjang & Berat", "Bab 6: Bangun Datar"],
+                "Bahasa Indonesia": ["Bab 1: Mari Bermain & Belajar", "Bab 2: Kawan Seiring", "Bab 3: Pengalamanku", "Bab 4: Cuaca di Sekitarku", "Bab 5: Berkomunikasi dengan Baik"],
+                "IPAS": ["Bab 1: Kenali Hewan di Sekitarku", "Bab 2: Siklus Hidup Makhluk Hidup", "Bab 3: Benda Bersama Kita", "Bab 4: Kenampakan Alam", "Bab 5: Mengenal Lingkungan Sosial"],
+                "Pendidikan Pancasila": ["Bab 1: Aku Anak Indonesia", "Bab 2: Mengenal Lambang Negara", "Bab 3: Hak dan Kewajibanku", "Bab 4: Kebersamaan dalam Keberagaman"],
+                "Bahasa Inggris": ["Unit 1: Hello, My Name Is...", "Unit 2: My Family", "Unit 3: Colors and Shapes", "Unit 4: My House", "Unit 5: Animals"]
+            },
+            "SMA - Kelas 12": {
+                "Fisika": ["Bab 1: Listrik Arus Searah", "Bab 2: Listrik Statis", "Bab 3: Medan Magnet", "Bab 4: Induksi Elektromagnetik", "Bab 5: Radiasi Elektromagnetik"],
+                "Ekonomi": ["Bab 1: Akuntansi Sebagai Sistem Informasi", "Bab 2: Persamaan Dasar Akuntansi", "Bab 3: Siklus Akuntansi Perusahaan Jasa"],
+                "Sosiologi": ["Bab 1: Perubahan Sosial di Masyarakat", "Bab 2: Globalisasi & Ketimpangan Sosial", "Bab 3: Kearifan Lokal & Pemberdayaan Komunitas"]
+            }
+        }
+        
+        # Penarikan daftar bab yang cerdas dengan fallback generic
+        daftar_bab = bab_db.get(jenjang_kelas, {}).get(mapel)
+        if not daftar_bab:
+            daftar_bab = [f"Bab 1: Pendahuluan {mapel}", f"Bab 2: Konsep Dasar {mapel}", f"Bab 3: Analisis {mapel}", f"Bab 4: Evaluasi {mapel}"]
+            
+        daftar_bab_tampil = list(daftar_bab)
+        daftar_bab_tampil.append("LAINNYA (Ketik Manual)")
+        
+        pilihan_bab = st.selectbox("Pilih Topik/Bab Pembelajaran:", daftar_bab_tampil)
+        
+        if pilihan_bab == "LAINNYA (Ketik Manual)":
+            judul_materi = st.text_input("Ketik Bab/Topik spesifik:", placeholder="Contoh: Menghitung Luas Segitiga")
+        else:
+            judul_materi = pilihan_bab
+            
         uploaded_files = []
 
     st.markdown("### 👨‍🏫 Pilih Guru Favoritmu!")
-    jenjang_inti = jenjang_kelas.split(" - ")[0] 
     daftar_guru = DATA_GURU[jenjang_inti]
     nama_guru_pilihan = st.radio("Daftar Guru Tersedia:", [g['nama'] for g in daftar_guru], horizontal=True, label_visibility="collapsed")
     guru_terpilih = next(g for g in daftar_guru if g['nama'] == nama_guru_pilihan)
@@ -275,7 +301,7 @@ with tab_belajar:
     if btn_analisis:
         if not mapel: st.warning("Silakan isi Mata Pelajaran!")
         elif mode_belajar == "📸 Unggah Foto Buku" and not uploaded_files: st.warning("Silakan unggah minimal satu foto buku!")
-        elif mode_belajar == "✍️ Ketik Topik Materi Bebas" and not judul_materi: st.warning("Silakan ketik Topik Pembelajaran yang diinginkan!")
+        elif mode_belajar == "📑 Pilih Topik (Kurikulum)" and not judul_materi: st.warning("Silakan ketik atau pilih Topik Pembelajaran!")
         else:
             st.session_state.guru_aktif = guru_terpilih
             for key in list(st.session_state.keys()):
@@ -287,7 +313,7 @@ with tab_belajar:
             nama_asli_guru = st.session_state.guru_aktif['nama'].split('(')[0].strip()
             
             with st.spinner(f"{nama_asli_guru} sedang menyiapkan materi yang disesuaikan untuk {jenjang_kelas}..."):
-                instruksi_format = f"""
+                instruksi_format = """
                 Keluarkan 4 bagian:
                 ===TAG_MATERI=== (Maksimal 3 kata spesifik)
                 ===NASKAH_LAYAR=== (HTML murni, DILARANG LaTeX/MathJax)
