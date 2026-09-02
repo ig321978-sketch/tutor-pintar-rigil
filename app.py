@@ -305,12 +305,12 @@ with tab_belajar:
                  
             nama_asli_guru = st.session_state.guru_aktif['nama'].split('(')[0].strip()
             
-            with st.spinner(f"{nama_asli_guru} sedang menyiapkan materi {mapel} untuk {jenjang_kelas}..."):
+            with st.spinner(f"{nama_asli_guru} sedang menyiapkan materi {mapel} bergambar untuk {jenjang_kelas}..."):
                 instruksi_format = """
                 Keluarkan 4 bagian:
                 ===TAG_MATERI=== (Maksimal 3 kata spesifik)
-                ===NASKAH_LAYAR=== (HTML murni, DILARANG LaTeX/MathJax. Gunakan struktur paragraf sederhana.)
-                ===NASKAH_SUARA=== (Teks lisan)
+                ===NASKAH_LAYAR=== (HTML murni yang atraktif. WAJIB sertakan 1 atau 2 gambar ilustrasi yang relevan menggunakan tag HTML ini: <img src="https://image.pollinations.ai/prompt/DESKRIPSI_GAMBAR_DALAM_BAHASA_INGGRIS?width=600&height=400&nologo=true" style="width:100%; border-radius:8px; margin: 15px 0; box-shadow: 0 4px 8px rgba(0,0,0,0.1);">. Pastikan ganti DESKRIPSI_GAMBAR_DALAM_BAHASA_INGGRIS dengan kata kunci objek yang spesifik. DILARANG LaTeX/MathJax.)
+                ===NASKAH_SUARA=== (Teks lisan yang panjang dan seru untuk audio)
                 ===KUIS=== (5 soal. Soal 4: [SIMULASI UJIAN NASIONAL HOTS] Pertanyaan?|||Opsi 1|||Opsi 2|||Opsi 3|||Kunci. Soal 5: [UJIAN LISAN] Pertanyaan?|||LISAN)
                 """
                 payload_ai = [f"Kamu Tutor AI {mapel} bernama {nama_asli_guru}. Susun materi: '{judul_materi}' untuk siswa bernama {nama_siswa} kelas {jenjang_kelas}. Sesuaikan kurikulum, gaya bahasa, dan kedalaman materi dengan jenjang kelas tersebut.\n\n{instruksi_format}"]
@@ -343,7 +343,7 @@ with tab_belajar:
                         st.session_state.daftar_kuis = parsed_kuis
                     st.session_state.berhasil_baca = True
                     st.rerun() 
-                except Exception as e: st.error(f"Gagal memproses: {e}")
+                except Exception as e: st.error(f"Gagal memproses AI: {e}")
 
     if st.session_state.berhasil_baca:
         st.markdown("---")
@@ -367,6 +367,7 @@ with tab_belajar:
         
         with open(st.session_state.file_suara, "rb") as f: audio_b64 = base64.b64encode(f.read()).decode()
         
+        # --- HTML DENGAN AUTO SCROLL & KECEPATAN DIPERLAMBAT ---
         html_typewriter = f"""
         <div style="text-align:center; padding:15px; background:#fff; border-radius:10px; box-shadow:0 2px 8px rgba(0,0,0,0.1); margin-bottom:20px;">
             <audio id="guruAudio" controls style="width: 100%;">
@@ -375,13 +376,15 @@ with tab_belajar:
             <p style="font-size:12px; color:#888; margin-top:5px;">Tekan tombol Play untuk mulai mendengarkan penjelasan</p>
         </div>
         
-        <div style="background-color:#F4FBFF; border-left:6px solid #2AB3FF; padding:25px; border-radius:10px; font-family:sans-serif; font-size:17px; line-height:1.7; min-height: 200px;">
+        <!-- Wadah luar dengan ketinggian tetap dan fungsi Auto Scroll -->
+        <div id="scrollContainer" style="background-color:#F4FBFF; border-left:6px solid #2AB3FF; padding:25px; border-radius:10px; font-family:sans-serif; font-size:17px; line-height:1.7; height: 350px; overflow-y: auto; scroll-behavior: smooth; position: relative;">
             <div id="typewriterBox"></div>
         </div>
 
         <script>
             const rawHTMLText = `{st.session_state.naskah_layar}`;
             const targetDiv = document.getElementById("typewriterBox");
+            const scrollContainer = document.getElementById("scrollContainer");
             const audioEl = document.getElementById("guruAudio");
             
             let isTyping = false;
@@ -389,7 +392,8 @@ with tab_belajar:
             let currentIndex = 0;
             let typingInterval;
             
-            const typingSpeedMs = 40; 
+            // Kecepatan diperlambat ~50% (dari 40ms menjadi 75ms) agar sinkron dengan laju baca.
+            const typingSpeedMs = 75; 
             
             function typeWriter() {{
                 if (currentIndex < rawHTMLText.length) {{
@@ -407,6 +411,9 @@ with tab_belajar:
                         currentIndex++;
                     }}
                     targetDiv.innerHTML = typedText;
+                    
+                    // Fitur Auto-Scroll ke bawah mengikuti naskah
+                    scrollContainer.scrollTop = scrollContainer.scrollHeight;
                 }} else {{
                     clearInterval(typingInterval);
                 }}
@@ -430,10 +437,15 @@ with tab_belajar:
             audioEl.addEventListener('ended', () => {{
                 clearInterval(typingInterval);
                 targetDiv.innerHTML = rawHTMLText;
+                // Scroll penuh di akhir
+                setTimeout(() => {{
+                    scrollContainer.scrollTop = scrollContainer.scrollHeight;
+                }}, 100);
             }});
         </script>
         """
-        components.html(html_typewriter, height=500, scrolling=True)
+        components.html(html_typewriter, height=520)
+        # --- AKHIR BLOK ANIMASI ---
 
         st.markdown("---")
         st.markdown(f"## 🏆 Latihan & Dapatkan POINT KAMU!")
@@ -455,7 +467,6 @@ with tab_belajar:
                                     supabase.table("profil_siswa").update({"saldo_igil": saldo_saat_ini + hadiah}).eq("id", siswa_id).execute()
                                     log_baru = {"siswa_id": siswa_id, "mapel": mapel, "bab": st.session_state.tag_materi.title(), "skor": 100 if is_hots else 80, "status_lulus": is_hots}
                                     supabase.table("histori_belajar").insert(log_baru).execute()
-                                    # Pemicu Lulus jika sudah mencapai target
                                     if not is_lulus and penguasaan_materi + 1 >= BATAS_MASTER: 
                                         st.balloons()
                                 st.rerun()
