@@ -5,6 +5,7 @@ import time
 import json
 import base64
 import uuid
+import os
 from datetime import datetime
 from PIL import Image
 from google import genai
@@ -68,20 +69,28 @@ except:
 client_gemini = genai.Client(api_key=API_KEY)
 
 try:
-    gcp_json_str = st.secrets["GOOGLE_CREDENTIALS_JSON"]
-    gcp_creds_dict = json.loads(gcp_json_str)
-    gcp_credentials = service_account.Credentials.from_service_account_info(gcp_creds_dict)
-    client_tts = texttospeech.TextToSpeechClient(credentials=gcp_credentials)
+    gcp_json_str = st.secrets.get("GOOGLE_CREDENTIALS_JSON", "")
+    if gcp_json_str:
+        gcp_creds_dict = json.loads(gcp_json_str)
+        gcp_credentials = service_account.Credentials.from_service_account_info(gcp_creds_dict)
+        client_tts = texttospeech.TextToSpeechClient(credentials=gcp_credentials)
+    else:
+        client_tts = None
 except:
     client_tts = None
 
 def buat_suara_google(teks, nama_file, nama_suara, pitch_guru, rate_guru):
-    if not client_tts: return
-    synthesis_input = texttospeech.SynthesisInput(text=teks)
-    voice = texttospeech.VoiceSelectionParams(language_code="id-ID", name=nama_suara)
-    audio_config = texttospeech.AudioConfig(audio_encoding=texttospeech.AudioEncoding.MP3, speaking_rate=rate_guru, pitch=pitch_guru)
-    response = client_tts.synthesize_speech(input=synthesis_input, voice=voice, audio_config=audio_config)
-    with open(nama_file, "wb") as out: out.write(response.audio_content)
+    if not client_tts: return False
+    try:
+        synthesis_input = texttospeech.SynthesisInput(text=teks)
+        voice = texttospeech.VoiceSelectionParams(language_code="id-ID", name=nama_suara)
+        audio_config = texttospeech.AudioConfig(audio_encoding=texttospeech.AudioEncoding.MP3, speaking_rate=rate_guru, pitch=pitch_guru)
+        response = client_tts.synthesize_speech(input=synthesis_input, voice=voice, audio_config=audio_config)
+        with open(nama_file, "wb") as out: out.write(response.audio_content)
+        return True
+    except Exception as e:
+        print(f"Gagal generate suara: {e}")
+        return False
 
 # --- FUNGSI LOGIKA KURIKULUM MERDEKA (DINAMIS) ---
 def get_mapel_list(kelas):
@@ -273,8 +282,11 @@ with tab_belajar:
                  
             nama_asli_guru = st.session_state.guru_aktif['nama'].split('(')[0].strip()
             
-            with st.spinner(f"{nama_asli_guru} sedang menyiapkan materi beserta gambar ilustrasi untuk {jenjang_kelas}..."):
-                # PERBAIKAN FATAL: Memaksa AI hanya mengeluarkan 1 naskah agar suara 100% sinkron, dan mengunci format URL gambar
+            # Hapus file audio lama jika ada agar tidak terjadi error bentrok
+            if os.path.exists(st.session_state.file_suara):
+                os.remove(st.session_state.file_suara)
+            
+            with st.spinner(f"{nama_asli_guru} sedang menyiapkan materi {mapel} bergambar untuk {jenjang_kelas}..."):
                 instruksi_format = """
                 Keluarkan hanya 3 bagian:
                 ===TAG_MATERI=== (Maksimal 3 kata spesifik)
@@ -297,10 +309,8 @@ with tab_belajar:
                         naskah_kotor = re.search(r'===NASKAH_LAYAR===(.*?)(?====KUIS===|$)', full_text, re.DOTALL).group(1).strip()
                         st.session_state.naskah_layar = naskah_kotor.replace('\n', '<br>')
                         
-                        # --- SOLUSI SINKRONISASI SUARA 100% ---
-                        # Kita sedot naskah layar, hapus gambar dan tag HTML-nya, lalu berikan sisanya ke Google TTS
-                        teks_suara_murni = re.sub(r'<[^>]+>', '', naskah_kotor) # Hapus semua tag HTML & img
-                        teks_suara_murni = re.sub(r'[*#_`>-]', '', teks_suara_murni) # Hapus sisa markdown
+                        teks_suara_murni = re.sub(r'<[^>]+>', '', naskah_kotor) 
+                        teks_suara_murni = re.sub(r'[*#_`>-]', '', teks_suara_murni) 
                         buat_suara_google(teks_suara_murni, st.session_state.file_suara, guru_terpilih['voice'], guru_terpilih['pitch'], guru_terpilih['rate'])
                     
                     if "===KUIS===" in full_text:
@@ -335,21 +345,36 @@ with tab_belajar:
 
         st.markdown(f"## 🎧 Dengarkan Penjelasan {nama_asli_guru}")
         
-        with open(st.session_state.file_suara, "rb") as f: audio_b64 = base64.b64encode(f.read()).decode()
+        # --- PERLINDUNGAN ANTI-CRASH JIKA AUDIO GAGAL DIBUAT ---
+        audio_tersedia = os.path.exists(st.session_state.file_suara)
         
-        # Melindungi HTML agar tidak merusak Javascript
+        if audio_tersedia:
+            with open(st.session_state.file_suara, "rb") as f: audio_b64 = base64.b64encode(f.read()).decode()
+            audio_html_element = f"""
+            <div style="text-align:center; padding:15px; background:#fff; border-radius:10px; box-shadow:0 2px 8px rgba(0,0,0,0.1); margin-bottom:20px;">
+                <audio id="guruAudio" controls style="width: 100%;">
+                    <source src="data:audio/mp3;base64,{audio_b64}" type="audio/mp3">
+                </audio>
+                <p style="font-size:12px; color:#888; margin-top:5px;">Tekan tombol Play untuk mulai mendengarkan penjelasan</p>
+            </div>
+            """
+            script_trigger = "audioEl.addEventListener('play', () => {"
+        else:
+            # Fallback jika audio gagal/kredensial TTS belum diisi
+            audio_html_element = """
+            <div style="text-align:center; padding:15px; background:#FFF3E0; border-radius:10px; border: 1px solid #FFB74D; margin-bottom:20px;">
+                <p style="color: #E65100; margin:0; font-weight:bold;">⚠️ Fitur Suara Guru AI Belum Aktif</p>
+                <p style="font-size:12px; color:#E65100; margin-top:5px;">Sistem akan langsung menampilkan naskah secara otomatis.</p>
+            </div>
+            """
+            # Otomatis menjalankan animasi saat halaman dimuat jika tidak ada tombol play
+            script_trigger = "setTimeout(() => {"
+            
         safe_html = st.session_state.naskah_layar.replace('\\', '\\\\').replace('`', '\\`').replace('$', '\\$')
         
-        # --- HTML DENGAN AUTO SCROLL & KECEPATAN DIPERLAMBAT 50% ---
         html_typewriter = f"""
-        <div style="text-align:center; padding:15px; background:#fff; border-radius:10px; box-shadow:0 2px 8px rgba(0,0,0,0.1); margin-bottom:20px;">
-            <audio id="guruAudio" controls style="width: 100%;">
-                <source src="data:audio/mp3;base64,{audio_b64}" type="audio/mp3">
-            </audio>
-            <p style="font-size:12px; color:#888; margin-top:5px;">Tekan tombol Play untuk mulai mendengarkan penjelasan</p>
-        </div>
+        {audio_html_element}
         
-        <!-- Wadah luar dengan Auto Scroll -->
         <div id="scrollContainer" style="background-color:#F4FBFF; border-left:6px solid #2AB3FF; padding:25px; border-radius:10px; font-family:sans-serif; font-size:17px; line-height:1.7; height: 350px; overflow-y: auto; scroll-behavior: smooth; position: relative;">
             <div id="typewriterBox"></div>
         </div>
@@ -384,15 +409,14 @@ with tab_belajar:
                         currentIndex++;
                     }}
                     targetDiv.innerHTML = typedText;
-                    
-                    // Fitur Auto-Scroll
                     scrollContainer.scrollTop = scrollContainer.scrollHeight;
                 }} else {{
                     clearInterval(typingInterval);
                 }}
             }}
 
-            audioEl.addEventListener('play', () => {{
+            // Trigger dinamis (dari tombol Play ATAU otomatis)
+            {script_trigger}
                 if (!isTyping) {{
                     isTyping = true;
                     typedText = "";
@@ -400,18 +424,20 @@ with tab_belajar:
                     targetDiv.innerHTML = "";
                     typingInterval = setInterval(typeWriter, typingSpeedMs);
                 }}
-            }});
+            {'});' if audio_tersedia else '}, 1000);'}
 
-            audioEl.addEventListener('pause', () => {{
-                clearInterval(typingInterval);
-                isTyping = false;
-            }});
-            
-            audioEl.addEventListener('ended', () => {{
-                clearInterval(typingInterval);
-                targetDiv.innerHTML = rawHTMLText;
-                setTimeout(() => {{ scrollContainer.scrollTop = scrollContainer.scrollHeight; }}, 100);
-            }});
+            if(audioEl) {{
+                audioEl.addEventListener('pause', () => {{
+                    clearInterval(typingInterval);
+                    isTyping = false;
+                }});
+                
+                audioEl.addEventListener('ended', () => {{
+                    clearInterval(typingInterval);
+                    targetDiv.innerHTML = rawHTMLText;
+                    setTimeout(() => {{ scrollContainer.scrollTop = scrollContainer.scrollHeight; }}, 100);
+                }});
+            }}
         </script>
         """
         components.html(html_typewriter, height=520)
