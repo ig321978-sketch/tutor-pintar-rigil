@@ -192,7 +192,7 @@ if nyawa_saat_ini <= 0:
 tab_belajar, tab_rapor, tab_leaderboard = st.tabs(["📚 Ruang Belajar", "👨‍👩‍👧 Rapor Anak", "🏆 Papan Peringkat"])
 
 # ==========================================
-# TAB 1: RUANG BELAJAR
+# TAB 1: RUANG BELAJAR (VERSI KOMERSIAL)
 # ==========================================
 with tab_belajar:
     if st.button("🎁 Tukar Saldo $IGIL Menjadi Beasiswa Instan", use_container_width=True):
@@ -233,35 +233,30 @@ with tab_belajar:
             st.markdown("</div><br>", unsafe_allow_html=True)
 
     st.markdown("---")
-    mode_belajar = st.radio("Pilih Sumber Materi:", ["📸 Unggah Foto Buku", "✍️ Pilih Topik (Kurikulum Merdeka)"], horizontal=True)
+    mode_belajar = st.radio("Pilih Sumber Materi:", ["📸 Unggah Foto Buku", "✍️ Ketik Topik Materi Bebas"], horizontal=True)
 
     col_kelas, col_mapel = st.columns(2)
     with col_kelas: 
-        jenjang_kelas = st.selectbox("Jenjang & Kelas:", ["SD - Kelas 3"])
+        jenjang_kelas = st.selectbox(
+            "Jenjang & Kelas:", 
+            ["SD - Kelas 1", "SD - Kelas 2", "SD - Kelas 3", "SD - Kelas 4", "SD - Kelas 5", "SD - Kelas 6", 
+             "SMP - Kelas 7", "SMP - Kelas 8", "SMP - Kelas 9", 
+             "SMA - Kelas 10", "SMA - Kelas 11", "SMA - Kelas 12"], 
+            index=2 # Default di Kelas 3 SD untuk kemudahan jagoan Anda
+        )
         
     with col_mapel: 
-        daftar_mapel = ["Matematika", "Bahasa Indonesia", "IPAS (Sains & Sosial)", "Pendidikan Pancasila", "Bahasa Inggris"]
+        daftar_mapel = ["Matematika", "Bahasa Indonesia", "IPA / IPAS", "IPS", "Pendidikan Pancasila", "Bahasa Inggris", "Lainnya"]
         mapel = st.selectbox("Mata Pelajaran:", daftar_mapel)
 
     if mode_belajar == "📸 Unggah Foto Buku":
         uploaded_files = st.file_uploader("Foto Halaman Buku Pelajaran:", type=["jpg", "jpeg", "png"], accept_multiple_files=True)
         judul_materi = ""
     else:
-        bab_kurikulum = {
-            "Matematika": ["Bab 1: Bilangan Cacah sampai 1.000", "Bab 2: Penjumlahan & Pengurangan", "Bab 3: Perkalian & Pembagian", "Bab 4: Pecahan Sederhana", "Bab 5: Pengukuran Waktu, Panjang & Berat", "Bab 6: Bangun Datar"],
-            "Bahasa Indonesia": ["Bab 1: Mari Bermain & Belajar", "Bab 2: Kawan Seiring", "Bab 3: Pengalamanku", "Bab 4: Cuaca di Sekitarku", "Bab 5: Berkomunikasi dengan Baik"],
-            "IPAS (Sains & Sosial)": ["Bab 1: Kenali Hewan di Sekitarku", "Bab 2: Siklus Hidup Makhluk Hidup", "Bab 3: Benda Bersama Kita", "Bab 4: Kenampakan Alam", "Bab 5: Mengenal Lingkungan Sosial"],
-            "Pendidikan Pancasila": ["Bab 1: Aku Anak Indonesia", "Bab 2: Mengenal Lambang Negara", "Bab 3: Hak dan Kewajibanku", "Bab 4: Kebersamaan dalam Keberagaman"],
-            "Bahasa Inggris": ["Unit 1: Hello, My Name Is...", "Unit 2: My Family", "Unit 3: Colors and Shapes", "Unit 4: My House", "Unit 5: Animals"]
-        }
-        
-        pilihan_bab = st.selectbox("Pilih Topik Pembelajaran:", bab_kurikulum[mapel] + ["LAINNYA (Ketik Manual)"])
-        
-        if pilihan_bab == "LAINNYA (Ketik Manual)":
-            judul_materi = st.text_input("Ketik Bab/Topik spesifik:", placeholder="Contoh: Menghitung Luas Lingkaran")
-        else:
-            judul_materi = pilihan_bab
-            
+        judul_materi = st.text_input(
+            "Topik/Bab Materi yang Ingin Dipelajari:", 
+            placeholder="Contoh: Pecahan Sederhana, Siklus Air, dll."
+        )
         uploaded_files = []
 
     st.markdown("### 👨‍🏫 Pilih Guru Favoritmu!")
@@ -280,7 +275,7 @@ with tab_belajar:
     if btn_analisis:
         if not mapel: st.warning("Silakan isi Mata Pelajaran!")
         elif mode_belajar == "📸 Unggah Foto Buku" and not uploaded_files: st.warning("Silakan unggah minimal satu foto buku!")
-        elif mode_belajar == "✍️ Pilih Topik (Kurikulum Merdeka)" and not judul_materi: st.warning("Silakan pilih Bab!")
+        elif mode_belajar == "✍️ Ketik Topik Materi Bebas" and not judul_materi: st.warning("Silakan ketik Topik Pembelajaran yang diinginkan!")
         else:
             st.session_state.guru_aktif = guru_terpilih
             for key in list(st.session_state.keys()):
@@ -291,7 +286,7 @@ with tab_belajar:
                  
             nama_asli_guru = st.session_state.guru_aktif['nama'].split('(')[0].strip()
             
-            with st.spinner(f"{nama_asli_guru} sedang menyiapkan materi dari kurikulum nasional..."):
+            with st.spinner(f"{nama_asli_guru} sedang menyiapkan materi yang disesuaikan untuk {jenjang_kelas}..."):
                 instruksi_format = f"""
                 Keluarkan 4 bagian:
                 ===TAG_MATERI=== (Maksimal 3 kata spesifik)
@@ -299,9 +294,9 @@ with tab_belajar:
                 ===NASKAH_SUARA=== (Teks lisan)
                 ===KUIS=== (5 soal. Soal 4: [SIMULASI UJIAN NASIONAL HOTS] Pertanyaan?|||Opsi 1|||Opsi 2|||Opsi 3|||Kunci. Soal 5: [UJIAN LISAN] Pertanyaan?|||LISAN)
                 """
-                payload_ai = [f"Kamu Tutor AI {mapel} bernama {nama_asli_guru}. Susun materi: '{judul_materi}' untuk siswa bernama {nama_siswa} kelas {jenjang_kelas}.\n\n{instruksi_format}"]
+                payload_ai = [f"Kamu Tutor AI {mapel} bernama {nama_asli_guru}. Susun materi: '{judul_materi}' untuk siswa bernama {nama_siswa} kelas {jenjang_kelas}. Sesuaikan gaya bahasa dan tingkat kesulitan dengan jenjang kelas tersebut.\n\n{instruksi_format}"]
                 if mode_belajar == "📸 Unggah Foto Buku":
-                    payload_ai = [f"Kamu Tutor AI {mapel} bernama {nama_asli_guru}. Baca foto ini untuk siswa bernama {nama_siswa} kelas {jenjang_kelas}.\n\n{instruksi_format}"] + [Image.open(f) for f in uploaded_files]
+                    payload_ai = [f"Kamu Tutor AI {mapel} bernama {nama_asli_guru}. Baca foto buku ini untuk siswa bernama {nama_siswa} kelas {jenjang_kelas}. Sesuaikan gaya bahasa dan tingkat kesulitan dengan jenjang kelas tersebut.\n\n{instruksi_format}"] + [Image.open(f) for f in uploaded_files]
 
                 try:
                     response = client_gemini.models.generate_content(model='gemini-3.6-flash', contents=payload_ai)
