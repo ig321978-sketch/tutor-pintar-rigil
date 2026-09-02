@@ -282,13 +282,12 @@ with tab_belajar:
             if os.path.exists(st.session_state.file_suara):
                 os.remove(st.session_state.file_suara)
             
-            with st.spinner(f"{nama_asli_guru} sedang menyiapkan presentasi visual untuk {jenjang_kelas}..."):
-                # REVOLUSI PROMPT: AI dilarang menggunakan CSS rumit yang merusak DOM. Hanya boleh pakai tag HTML dasar (h3, b, br, ul, li)
+            with st.spinner(f"{nama_asli_guru} sedang menyiapkan materi dan sketsa ilustrasi untuk {jenjang_kelas}..."):
                 instruksi_format = """
                 Keluarkan 4 bagian secara berurutan:
                 ===TAG_MATERI=== (Maksimal 3 kata spesifik)
-                ===KATA_KUNCI_GAMBAR=== (WAJIB: Berikan HANYA 1 KATA BENDA dalam BAHASA INGGRIS untuk foto sampul. Contoh: volcano, microscope, temple. DILARANG lebih dari 2 kata!)
-                ===NASKAH_LAYAR=== (Gunakan HTML dasar untuk mempercantik teks: <h3> untuk Judul Topik, <b> untuk menebalkan kata penting, <br> untuk baris baru. Gunakan poin-poin agar menarik. DILARANG MENGGUNAKAN TAG <img...> atau <div...>. Buat naskah seru seolah presentasi!)
+                ===KATA_KUNCI_GAMBAR=== (WAJIB: Berikan HANYA 1 KATA BENDA tunggal dalam BAHASA INGGRIS untuk sketsa buku pelajaran. Contoh: apple, volcano, leaf, compass. DILARANG lebih dari 1 kata!)
+                ===NASKAH_LAYAR=== (Gunakan HTML murni dengan format menarik: gunakan tag <h3> untuk judul bagian, <b> untuk teks penting, dan <ul><li> untuk poin-poin penjelasan. DILARANG menggunakan tag <img...>. Buat penjelasan sangat atraktif untuk anak-anak.)
                 ===KUIS=== (5 soal. Soal 4: [SIMULASI UJIAN NASIONAL HOTS] Pertanyaan?|||Opsi 1|||Opsi 2|||Opsi 3|||Kunci. Soal 5: [UJIAN LISAN] Pertanyaan?|||LISAN)
                 """
                 payload_ai = [f"Kamu Tutor AI {mapel} bernama {nama_asli_guru}. Susun materi: '{judul_materi}' untuk {nama_siswa} kelas {jenjang_kelas}. Sesuaikan gaya bahasa.\n\n{instruksi_format}"]
@@ -305,7 +304,7 @@ with tab_belajar:
                         
                     if "===KATA_KUNCI_GAMBAR===" in full_text:
                         keyword_mentah = re.search(r'===KATA_KUNCI_GAMBAR===(.*?)(?====NASKAH_LAYAR===|$)', full_text, re.DOTALL)
-                        if keyword_mentah: st.session_state.img_keyword = re.sub(r'[^a-zA-Z0-9\s]', '', keyword_mentah.group(1).strip())
+                        if keyword_mentah: st.session_state.img_keyword = re.sub(r'[^a-zA-Z0-9]', '', keyword_mentah.group(1).strip())
                     
                     if "===NASKAH_LAYAR===" in full_text: 
                         naskah_kotor = re.search(r'===NASKAH_LAYAR===(.*?)(?====KUIS===|$)', full_text, re.DOTALL).group(1).strip()
@@ -346,51 +345,52 @@ with tab_belajar:
 
         st.markdown(f"## 🎧 Dengarkan Penjelasan {nama_asli_guru}")
         
-        # --- DESAIN KARTU PRESENTASI GAMMA.APP ---
-        # 1. Mendapatkan Gambar Fotografi Profesional
-        keyword_aman = urllib.parse.quote(st.session_state.img_keyword)
-        url_gambar_hd = f"https://image.pollinations.ai/prompt/{keyword_aman}%20highly%20detailed%20beautiful%20educational%20photography%20no%20text?width=800&height=400&nologo=true"
+        # --- SKetsa HITAM PUTIH MINIMALIS YANG BERSIH DI ATAS KARTU ---
+        # Menggunakan parameter URL eksplisit untuk memastikan garis hitam tegas dan latar belakang murni putih tanpa teks acak
+        clean_prompt = f"{st.session_state.img_keyword}, minimalist black and white line art vector sketch, textbook illustration, pure white background, absolutely no text, no letters"
+        safe_prompt_url = urllib.parse.quote(clean_prompt)
+        sketch_url = f"https://image.pollinations.ai/prompt/{safe_prompt_url}?width=400&height=250&nologo=true&seed=42"
         
         audio_tersedia = os.path.exists(st.session_state.file_suara)
         if audio_tersedia:
             with open(st.session_state.file_suara, "rb") as f: audio_b64 = base64.b64encode(f.read()).decode()
-            audio_tag = f'<audio id="guruAudio" controls style="width: 100%; max-width: 400px; margin-top: 15px;"><source src="data:audio/mp3;base64,{audio_b64}" type="audio/mp3"></audio>'
+            audio_tag = f'<audio id="guruAudio" controls style="width: 100%; max-width: 350px; margin-top: 10px;"><source src="data:audio/mp3;base64,{audio_b64}" type="audio/mp3"></audio>'
             script_trigger = "audioEl.addEventListener('play', () => {"
-            petunjuk_teks = "▶️ Tekan Play untuk memulai penjelasan"
+            petunjuk_teks = "▶️ Tekan Play untuk mendengarkan penjelasan"
         else:
-            audio_tag = '<p style="color: #E65100; margin:10px 0 0 0; font-weight:bold;">⚠️ Fitur Suara Guru AI Belum Aktif</p>'
+            audio_tag = '<p style="color: #1565C0; margin:5px 0 0 0; font-weight:bold; font-size:14px;">Teks Otomatis Sedang Berjalan ✍️</p>'
             script_trigger = "setTimeout(() => {"
-            petunjuk_teks = "Sistem sedang menampilkan naskah belajar otomatis..."
+            petunjuk_teks = "Sistem menyajikan naskah belajar interaktif..."
 
         safe_html = st.session_state.naskah_layar.replace('\\', '\\\\').replace('`', '\\`').replace('$', '\\$')
         
         html_typewriter = f"""
         <div style="background-color:#ffffff; border-radius:16px; box-shadow: 0 8px 24px rgba(0,0,0,0.08); overflow:hidden; font-family:sans-serif; border: 1px solid #eaeaea; margin-bottom: 30px;">
             
-            <!-- GAMBAR BANNER (Render statis agar tidak rusak oleh JS) -->
-            <div style="width:100%; height:250px; background-image:url('{url_gambar_hd}'); background-size:cover; background-position:center; border-bottom: 4px solid #2AB3FF; position: relative;">
-                <div style="position: absolute; bottom: 10px; right: 10px; background: rgba(0,0,0,0.6); color: white; padding: 4px 10px; border-radius: 20px; font-size: 11px;">Materi: {st.session_state.img_keyword.title()}</div>
+            <!-- HEADER SKETSA HITAM PUTIH & KONTROL AUDIO -->
+            <div style="display: flex; flex-wrap: wrap; background: #f8fbfd; border-bottom: 3px solid #2AB3FF; padding: 20px; align-items: center; justify-content: space-around;">
+                <div style="text-align: center; margin: 5px;">
+                    <img src="{sketch_url}" style="width: 180px; height: 110px; object-fit: contain; background: white; border-radius: 8px; border: 1px solid #ddd; padding: 4px; box-shadow: 0 2px 5px rgba(0,0,0,0.05);">
+                    <div style="font-size: 11px; color: #666; margin-top: 4px; font-style: italic;">Sketsa: {st.session_state.img_keyword.title()}</div>
+                </div>
+                <div style="text-align: center; margin: 5px; flex-grow: 1; max-width: 380px;">
+                    {audio_tag}
+                    <p style="font-size:12px; color:#555; margin-top: 4px;">{petunjuk_teks}</p>
+                </div>
             </div>
             
-            <!-- KONTROL SUARA -->
-            <div style="padding: 15px 25px; background-color: #fcfcfc; border-bottom: 1px solid #eee; text-align: center;">
-                {audio_tag}
-                <p style="font-size:13px; color:#666; margin-top: 5px;">{petunjuk_teks}</p>
-            </div>
-            
-            <!-- WADAH TEKS ANIMASI -->
-            <div id="scrollContainer" style="padding: 30px 40px; height: 350px; overflow-y: auto; scroll-behavior: smooth;">
+            <!-- WADAH TEKS ANIMASI DENGAN FORMATTING KAYA -->
+            <div id="scrollContainer" style="padding: 30px 40px; height: 360px; overflow-y: auto; scroll-behavior: smooth;">
                 <div id="typewriterBox"></div>
             </div>
         </div>
 
         <style>
-            /* STYLING CSS UNTUK MENJADIKAN TEKS TERLIHAT PREMIUM (ALGORITMA GAMMA.APP) */
-            #typewriterBox {{ color: #333; font-size: 17px; line-height: 1.8; }}
-            #typewriterBox h3 {{ color: #0277BD; font-size: 24px; margin-top: 15px; margin-bottom: 10px; border-bottom: 2px solid #E1F5FE; padding-bottom: 5px; }}
-            #typewriterBox b {{ color: #C62828; background-color: #FFEBEE; padding: 2px 6px; border-radius: 4px; }}
-            #typewriterBox ul {{ background: #f9f9f9; padding: 15px 15px 15px 35px; border-radius: 8px; border-left: 4px solid #4CAF50; }}
-            #typewriterBox li {{ margin-bottom: 8px; }}
+            #typewriterBox {{ color: #222; font-size: 16px; line-height: 1.8; }}
+            #typewriterBox h3 {{ color: #00838F; font-size: 22px; margin-top: 15px; margin-bottom: 10px; border-bottom: 2px solid #E0F7FA; padding-bottom: 4px; }}
+            #typewriterBox b {{ color: #B71C1C; background-color: #FFEBEE; padding: 2px 6px; border-radius: 4px; font-weight: bold; }}
+            #typewriterBox ul {{ background: #F1F8E9; padding: 15px 15px 15px 30px; border-radius: 8px; border-left: 4px solid #7CB342; margin: 15px 0; }}
+            #typewriterBox li {{ margin-bottom: 8px; color: #333; }}
         </style>
 
         <script>
@@ -404,7 +404,7 @@ with tab_belajar:
             let currentIndex = 0;
             let typingInterval;
             
-            const typingSpeedMs = 110; 
+            const typingSpeedMs = 70; 
             
             function typeWriter() {{
                 if (currentIndex < rawHTMLText.length) {{
@@ -589,6 +589,6 @@ with tab_leaderboard:
         for idx, p in enumerate(data_leaderboard_db):
             medali = "🥇" if idx == 0 else "🥈" if idx == 1 else "🥉" if idx == 2 else "🎓"
             warna_bg = "#E3F2FD" if p['nama'] == nama_siswa else "#FFFFFF"
-            html_leaderboard += f"<div style='display:flex; justify-content:space-between; padding:15px; margin-bottom:10px; background-color:{warna_bg}; border-radius:8px; border:1px solid #E0E0E0;'><div style='font-size:18px;'><b>{medali} Peringkat {idx+1}</b> - {p['nama']}</div><div style='font-size:18px; font-weight:bold; color:#00838F;'>{p['saldo_igil']} POINT KAMU</div></div>"
+            html_leaderboard += f"<div style='display:flex; justify-content:space-between; padding:15px; margin-bottom:10px; background-color:{warna_bg}; border-radius:8px; border:1px solid #E0E0E0;'><div style='font-size:18px;'><b>{medali} Peringkat {idx+1}</b> - {p['nama']}</div><div style='font-size:18px; font-weight:bold; color:#00838F;`>{p['saldo_igil']} POINT KAMU</div></div>"
         html_leaderboard += "</div>"
         st.markdown(html_leaderboard, unsafe_allow_html=True)
