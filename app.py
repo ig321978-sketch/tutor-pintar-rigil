@@ -17,75 +17,65 @@ from supabase import create_client, Client
 BATAS_MASTER = 5 
 NYAWA_MAKSIMAL = 3
 
-# --- KOSMETIK UI: TEMA PROFESIONAL & ELEGAN ---
+# --- KOSMETIK UI: TEMA PASTEL & PUDAR (LEMBUT) ---
 st.markdown("""
     <style>
-        /* 1. Latar Belakang Bersih (Putih) */
+        /* Latar Belakang Utama (Sangat terang, nyaris putih) */
         .stApp {
-            background-color: #FFFFFF; 
+            background-color: #FAFAFA; 
         }
         
-        /* 2. Tipografi Elegan (Dark Slate) */
+        /* Teks Abu-abu Gelap (Bukan hitam pekat agar tidak tajam) */
         html, body, p, h1, h2, h3, h4, h5, h6, span, label, div {
-            color: #1E293B !important;
-            font-family: 'Inter', 'Segoe UI', Roboto, sans-serif;
+            color: #4A4A4A !important;
+            font-family: sans-serif;
         }
 
-        /* 3. Tombol Utama (Royal Blue - Elegan & Profesional) */
+        /* Tombol Lembut (Toska Pudar) */
         .stButton>button {
-            background-color: #2563EB !important;
-            color: #FFFFFF !important; /* Teks putih di dalam tombol biru */
+            background-color: #81C784 !important; /* Hijau pastel/pudar */
+            color: white !important;
             border-radius: 8px;
             border: none !important;
-            padding: 10px 24px;
+            padding: 8px 20px;
             font-size: 15px;
             font-weight: 600;
-            box-shadow: 0 4px 6px -1px rgba(37, 99, 235, 0.2);
-            transition: all 0.2s ease-in-out;
+            transition: 0.2s;
         }
         .stButton>button:hover {
-            background-color: #1D4ED8 !important;
-            box-shadow: 0 10px 15px -3px rgba(37, 99, 235, 0.3);
-            transform: translateY(-2px);
+            background-color: #66BB6A !important;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
         }
 
-        /* 4. Kotak Input Teks (Minimalis) */
+        /* Kotak Input Teks */
         .stTextInput>div>div>input {
             border-radius: 8px;
-            border: 1px solid #CBD5E1 !important;
+            border: 1px solid #E0E0E0 !important;
             background-color: #FFFFFF !important;
-            color: #1E293B !important;
-        }
-        .stTextInput>div>div>input:focus {
-            border: 2px solid #2563EB !important;
-            box-shadow: 0 0 0 1px #2563EB !important;
+            color: #4A4A4A !important;
         }
 
-        /* 5. Kotak Pesan (Info/Peringatan) - Bersih dengan garis samping */
+        /* Kotak Peringatan/Info (Sangat Pudar) */
         .stAlert {
-            background-color: #F8FAFC !important;
-            border: none !important;
-            border-left: 4px solid #2563EB !important;
-            color: #1E293B !important;
-            border-radius: 6px;
-            box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+            background-color: #F5F5F5 !important;
+            border: 1px solid #EEEEEE !important;
+            color: #4A4A4A !important;
+            border-radius: 8px;
         }
 
-        /* 6. Tabs Navigasi (Gaya Modern) */
+        /* Navigasi Tab (Sederhana) */
         .stTabs [data-baseweb="tab-list"] {
-            border-bottom: 2px solid #F1F5F9;
-            gap: 20px;
+            border-bottom: 1px solid #E0E0E0;
         }
         .stTabs [data-baseweb="tab"] {
             background-color: transparent !important;
+            color: #9E9E9E !important;
             border: none !important;
-            color: #64748B !important;
-            padding-bottom: 10px;
         }
         .stTabs [aria-selected="true"] {
-            color: #2563EB !important;
-            border-bottom: 3px solid #2563EB !important;
-            font-weight: 600;
+            color: #4A4A4A !important;
+            border-bottom: 2px solid #81C784 !important; /* Garis bawah toska pudar */
+            font-weight: bold;
         }
     </style>
 """, unsafe_allow_html=True)
