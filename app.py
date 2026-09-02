@@ -17,68 +17,8 @@ from supabase import create_client, Client
 BATAS_MASTER = 5 
 NYAWA_MAKSIMAL = 3
 
-# --- KOSMETIK UI: TEMA PASTEL & PUDAR (LEMBUT) ---
-st.markdown("""
-    <style>
-        /* Latar Belakang Utama (Sangat terang, nyaris putih) */
-        .stApp {
-            background-color: #FAFAFA; 
-        }
-        
-        /* Teks Abu-abu Gelap (Bukan hitam pekat agar tidak tajam) */
-        html, body, p, h1, h2, h3, h4, h5, h6, span, label, div {
-            color: #4A4A4A !important;
-            font-family: sans-serif;
-        }
+st.set_page_config(page_title="$IGIL - Learn to Earn", page_icon="🎓", layout="centered")
 
-        /* Tombol Lembut (Toska Pudar) */
-        .stButton>button {
-            background-color: #81C784 !important; /* Hijau pastel/pudar */
-            color: white !important;
-            border-radius: 8px;
-            border: none !important;
-            padding: 8px 20px;
-            font-size: 15px;
-            font-weight: 600;
-            transition: 0.2s;
-        }
-        .stButton>button:hover {
-            background-color: #66BB6A !important;
-            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
-        }
-
-        /* Kotak Input Teks */
-        .stTextInput>div>div>input {
-            border-radius: 8px;
-            border: 1px solid #E0E0E0 !important;
-            background-color: #FFFFFF !important;
-            color: #4A4A4A !important;
-        }
-
-        /* Kotak Peringatan/Info (Sangat Pudar) */
-        .stAlert {
-            background-color: #F5F5F5 !important;
-            border: 1px solid #EEEEEE !important;
-            color: #4A4A4A !important;
-            border-radius: 8px;
-        }
-
-        /* Navigasi Tab (Sederhana) */
-        .stTabs [data-baseweb="tab-list"] {
-            border-bottom: 1px solid #E0E0E0;
-        }
-        .stTabs [data-baseweb="tab"] {
-            background-color: transparent !important;
-            color: #9E9E9E !important;
-            border: none !important;
-        }
-        .stTabs [aria-selected="true"] {
-            color: #4A4A4A !important;
-            border-bottom: 2px solid #81C784 !important; /* Garis bawah toska pudar */
-            font-weight: bold;
-        }
-    </style>
-""", unsafe_allow_html=True)
 # --- INISIALISASI KONEKSI SUPABASE ---
 @st.cache_resource
 def init_supabase() -> Client:
@@ -181,7 +121,7 @@ col_header1, col_header2 = st.columns([3, 1])
 with col_header1:
     st.success(f"Masuk sebagai: **{nama_siswa}**")
 with col_header2:
-    if st.button("Keluar / Ganti Akun"): # <-- BAGIAN INI YANG DIPERBAIKI
+    if st.button("Keluar / Ganti Akun"):
         st.session_state.sudah_login = False
         st.session_state.nama_siswa = ""
         st.rerun()
@@ -260,12 +200,44 @@ with tab_belajar:
 
     if st.session_state.tampilkan_toko:
         with st.container():
-            st.markdown("---")
+            st.markdown("<div style='background-color:#F5F5F5; padding:20px; border-radius:10px;'>", unsafe_allow_html=True)
+            st.markdown("### 🎁 Etalase Beasiswa Instan")
+            col1, col2, col3 = st.columns(3)
+            with col1:
+                st.info("📚 **Voucher Buku Gramedia**\n\nBiaya: **500 $IGIL**")
+                if st.button("Tukar", key="tukar_1"):
+                    if saldo_saat_ini >= 500:
+                        supabase.table("profil_siswa").update({"saldo_igil": saldo_saat_ini - 500}).eq("id", siswa_id).execute()
+                        st.success("✅ Berhasil! Kode: GRM-IGIL")
+                        time.sleep(1)
+                        st.rerun()
+                    else: st.error("❌ Saldo kurang.")
+            with col2:
+                st.warning("🌐 **Kuota Internet 5GB**\n\nBiaya: **1.000 $IGIL**")
+                if st.button("Tukar", key="tukar_2"):
+                    if saldo_saat_ini >= 1000:
+                        supabase.table("profil_siswa").update({"saldo_igil": saldo_saat_ini - 1000}).eq("id", siswa_id).execute()
+                        st.success("✅ Berhasil!")
+                        time.sleep(1)
+                        st.rerun()
+                    else: st.error("❌ Saldo kurang.")
+            with col3:
+                st.success("🏫 **Subsidi SPP Rp 50k**\n\nBiaya: **5.000 $IGIL**")
+                if st.button("Tukar", key="tukar_3"):
+                    if saldo_saat_ini >= 5000:
+                        supabase.table("profil_siswa").update({"saldo_igil": saldo_saat_ini - 5000}).eq("id", siswa_id).execute()
+                        st.success("✅ Dana dikirim!")
+                        time.sleep(1)
+                        st.rerun()
+                    else: st.error("❌ Saldo kurang.")
+            st.markdown("</div><br>", unsafe_allow_html=True)
+
+    st.markdown("---")
     mode_belajar = st.radio("Pilih Sumber Materi:", ["📸 Unggah Foto Buku", "✍️ Pilih Topik (Kurikulum Merdeka)"], horizontal=True)
 
     col_kelas, col_mapel = st.columns(2)
     with col_kelas: 
-        jenjang_kelas = st.selectbox("Jenjang & Kelas:", ["SD - Kelas 3"], disabled=True)
+        jenjang_kelas = st.selectbox("Jenjang & Kelas:", ["SD - Kelas 3"])
         
     with col_mapel: 
         daftar_mapel = ["Matematika", "Bahasa Indonesia", "IPAS (Sains & Sosial)", "Pendidikan Pancasila", "Bahasa Inggris"]
@@ -292,16 +264,6 @@ with tab_belajar:
             
         uploaded_files = []
 
-    st.markdown("---")
-    mode_belajar = st.radio("Pilih Sumber Materi:", ["📸 Unggah Foto Buku", "✍️ Pilih/Ketik Topik Materi"], horizontal=True)
-
-    col_kelas, col_mapel = st.columns(2)
-    with col_kelas: 
-        jenjang_kelas = st.selectbox("Jenjang & Kelas:", ["SD - Kelas 1", "SD - Kelas 2", "SD - Kelas 3", "SD - Kelas 4", "SD - Kelas 5", "SD - Kelas 6", "SMP - Kelas 7", "SMP - Kelas 8", "SMP - Kelas 9", "SMA - Kelas 10", "SMA - Kelas 11", "SMA - Kelas 12"], index=2)
-    with col_mapel: 
-        pilihan_mapel = st.selectbox("Mata Pelajaran:", ["Matematika", "Bahasa Indonesia", "Bahasa Inggris", "IPA (Sains)", "IPS (Sosial)", "Fisika", "Kimia", "Biologi", "LAINNYA (Ketik Manual)"])
-        mapel = st.text_input("Ketik Mata Pelajaran:", placeholder="Contoh: Muatan Lokal") if pilihan_mapel == "LAINNYA (Ketik Manual)" else pilihan_mapel
-
     st.markdown("### 👨‍🏫 Pilih Guru Favoritmu!")
     jenjang_inti = jenjang_kelas.split(" - ")[0] 
     daftar_guru = DATA_GURU[jenjang_inti]
@@ -318,7 +280,7 @@ with tab_belajar:
     if btn_analisis:
         if not mapel: st.warning("Silakan isi Mata Pelajaran!")
         elif mode_belajar == "📸 Unggah Foto Buku" and not uploaded_files: st.warning("Silakan unggah minimal satu foto buku!")
-        elif mode_belajar == "✍️ Pilih/Ketik Topik Materi" and not judul_materi: st.warning("Silakan pilih Bab!")
+        elif mode_belajar == "✍️ Pilih Topik (Kurikulum Merdeka)" and not judul_materi: st.warning("Silakan pilih Bab!")
         else:
             st.session_state.guru_aktif = guru_terpilih
             for key in list(st.session_state.keys()):
@@ -492,7 +454,7 @@ with tab_rapor:
     st.markdown(f"#### 📅 Aktivitas Hari Ini")
     if aktivitas_hari_ini:
         st.success(f"✅ Anak Anda, **{nama_siswa}**, SUDAH belajar hari ini!")
-        for aksi in aktivitas_hari_ini[:3]: # Tampilkan 3 aktivitas terbaru
+        for aksi in aktivitas_hari_ini[:3]:
             status_teks = "Lulus/Benar" if aksi.get('status_lulus') else "Belajar/Salah"
             st.write(f"- Mempelajari **{aksi.get('mapel')}** (Bab: {aksi.get('bab')}) - Status: {status_teks}")
     else:
