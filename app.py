@@ -285,12 +285,16 @@ with tab_belajar:
             if os.path.exists(st.session_state.file_suara):
                 os.remove(st.session_state.file_suara)
             
-            with st.spinner(f"{nama_asli_guru} sedang menyiapkan materi {mapel} dengan ilustrasi hitam putih..."):
-                # PERBAIKAN: Menambahkan perintah khusus 'black and white sketch illustration' dan CSS max-width 450px
+            with st.spinner(f"{nama_asli_guru} sedang menyiapkan materi {mapel} dengan ilustrasi vektor..."):
+                # PERBAIKAN FATAL: Memaksa Gemini hanya memanggil SATU kata benda untuk gambar agar tidak kacau.
                 instruksi_format = """
                 Keluarkan hanya 3 bagian:
                 ===TAG_MATERI=== (Maksimal 3 kata spesifik)
-                ===NASKAH_LAYAR=== (Ini adalah penjelasan materi berbentuk HTML murni. WAJIB sisipkan 1 atau 2 gambar ilustrasi dengan gaya HITAM PUTIH (seperti sketsa buku cetak) menggunakan tag ini: <img src="https://image.pollinations.ai/prompt/DESKRIPSI+GAMBAR+BAHASA+INGGRIS+black+and+white+sketch+illustration?width=600&height=400&nologo=true" style="max-width: 100%; width: 450px; display: block; margin: 15px auto; border-radius: 6px; border: 1px solid #ccc; box-shadow: 0 4px 6px rgba(0,0,0,0.05);">. SANGAT PENTING: Gunakan tanda plus (+) untuk mengganti spasi pada URL gambar. DILARANG menggunakan tanda kutip/spasi di dalam URL. DILARANG menggunakan format Markdown/LaTeX.)
+                ===NASKAH_LAYAR=== (Ini adalah penjelasan materi berbentuk HTML murni. WAJIB sisipkan 1 gambar ilustrasi. 
+                SANGAT PENTING - RAHASIA AGAR GAMBAR TIDAK JELEK: Jangan suruh AI menggambar diagram dengan teks. Suruh AI menggambar Ikon Vektor Klasik.
+                Gunakan format tag HTML ini persis:
+                <img src="https://image.pollinations.ai/prompt/SATU_KATA_BENDA_BAHASA_INGGRIS+simple+minimalist+black+and+white+vector+line+art+white+background+no+text?width=500&height=350&nologo=true&model=flux" style="width: 400px; max-width: 100%; display: block; margin: 20px auto; border-radius: 8px; mix-blend-mode: multiply;">
+                Ganti tulisan SATU_KATA_BENDA_BAHASA_INGGRIS dengan MAKSIMAL 1 atau 2 kata benda saja (contoh: leaf, volcano, rectangle). DILARANG menggunakan spasi di URL, gunakan tanda plus (+). DILARANG menggunakan format Markdown/LaTeX.)
                 ===KUIS=== (5 soal. Soal 4: [SIMULASI UJIAN NASIONAL HOTS] Pertanyaan?|||Opsi 1|||Opsi 2|||Opsi 3|||Kunci. Soal 5: [UJIAN LISAN] Pertanyaan?|||LISAN)
                 """
                 payload_ai = [f"Kamu Tutor AI {mapel} bernama {nama_asli_guru}. Susun materi: '{judul_materi}' untuk siswa bernama {nama_siswa} kelas {jenjang_kelas}. Sesuaikan gaya bahasa dengan anak usia {jenjang_kelas}.\n\n{instruksi_format}"]
@@ -358,10 +362,11 @@ with tab_belajar:
             """
             script_trigger = "audioEl.addEventListener('play', () => {"
         else:
+            # Mengubah kotak warning menjadi kotak Info biru yang lebih "ramah" dipandang
             audio_html_element = """
-            <div style="text-align:center; padding:15px; background:#FFF3E0; border-radius:10px; border: 1px solid #FFB74D; margin-bottom:20px;">
-                <p style="color: #E65100; margin:0; font-weight:bold;">⚠️ Fitur Suara Guru AI Belum Aktif</p>
-                <p style="font-size:12px; color:#E65100; margin-top:5px;">Sistem akan langsung menampilkan naskah bergambar secara otomatis.</p>
+            <div style="text-align:center; padding:15px; background:#E3F2FD; border-radius:10px; border: 1px solid #90CAF9; margin-bottom:20px;">
+                <p style="color: #1565C0; margin:0; font-weight:bold;">Teks Otomatis Sedang Berjalan ✍️</p>
+                <p style="font-size:13px; color:#1565C0; margin-top:5px;">Sistem sedang menampilkan naskah belajar untukmu...</p>
             </div>
             """
             script_trigger = "setTimeout(() => {"
@@ -515,7 +520,8 @@ with tab_belajar:
                                 if not is_lulus and koneksi_db_aktif:
                                     supabase.table("profil_siswa").update({"saldo_igil": saldo_saat_ini + 100}).eq("id", siswa_id).execute()
                                     supabase.table("histori_belajar").insert({"siswa_id": siswa_id, "mapel": mapel, "bab": st.session_state.tag_materi.title(), "skor": 100, "status_lulus": True}).execute()
-                                    if not is_lulus and penguasaan_materi + 1 >= BATAS_MASTER: st.balloons()
+                                    if not is_lulus and penguasaan_materi + 1 >= BATAS_MASTER: 
+                                        st.balloons()
                                 st.rerun()
                         else:
                             st.error(f"❌ **GAGAL/TIMEOUT! Nyawa berkurang 1.**\n\nAlasan AI: {hasil_teks}")
