@@ -6,6 +6,7 @@ import json
 import base64
 import uuid
 import os
+import urllib.parse
 from datetime import datetime
 from PIL import Image
 from google import genai
@@ -54,6 +55,8 @@ DATA_GURU = {
 if 'berhasil_baca' not in st.session_state: st.session_state.berhasil_baca = False
 if 'tag_materi' not in st.session_state: st.session_state.tag_materi = ""
 if 'naskah_layar' not in st.session_state: st.session_state.naskah_layar = ""
+if 'img_prompt' not in st.session_state: st.session_state.img_prompt = ""
+if 'img_html_final' not in st.session_state: st.session_state.img_html_final = ""
 if 'file_suara' not in st.session_state: st.session_state.file_suara = "audio_guru.mp3"
 if 'daftar_kuis' not in st.session_state: st.session_state.daftar_kuis = []
 if 'guru_aktif' not in st.session_state: st.session_state.guru_aktif = DATA_GURU["SD"][0] 
@@ -264,10 +267,6 @@ with tab_belajar:
     nama_guru_pilihan = st.radio("Daftar Guru Tersedia:", [g['nama'] for g in daftar_guru], horizontal=True, label_visibility="collapsed")
     guru_terpilih = next(g for g in daftar_guru if g['nama'] == nama_guru_pilihan)
 
-    if st.button("🔊 Putar Suara Perkenalan") and client_tts:
-        buat_suara_google(guru_terpilih['pesan'], "test_suara.mp3", guru_terpilih['voice'], guru_terpilih['pitch'], guru_terpilih['rate'])
-        st.audio("test_suara.mp3", autoplay=True)
-
     btn_analisis = st.button("Mulai Belajar! 🚀", use_container_width=True, type="primary")
 
     if btn_analisis:
@@ -276,6 +275,7 @@ with tab_belajar:
         elif mode_belajar == "📑 Pilih Topik (Kurikulum)" and not judul_materi: st.warning("Silakan ketik atau pilih Topik Pembelajaran!")
         else:
             st.session_state.guru_aktif = guru_terpilih
+            st.session_state.img_html_final = ""
             for key in list(st.session_state.keys()):
                 if key.startswith('status_soal_') or key.startswith('koin_diberikan_') or key.startswith('boss_'): del st.session_state[key]
             if koneksi_db_aktif: supabase.table("profil_siswa").update({"jenjang_kelas": jenjang_kelas}).eq("id", siswa_id).execute()
@@ -285,19 +285,16 @@ with tab_belajar:
             if os.path.exists(st.session_state.file_suara):
                 os.remove(st.session_state.file_suara)
             
-            with st.spinner(f"{nama_asli_guru} sedang menyiapkan materi {mapel} dengan ilustrasi vektor..."):
-                # PERBAIKAN FATAL: Memaksa Gemini hanya memanggil SATU kata benda untuk gambar agar tidak kacau.
+            with st.spinner(f"{nama_asli_guru} sedang menyiapkan materi dan memikirkan prompt gambar untuk {jenjang_kelas}..."):
+                # LANGKAH 1: Gemini Text menyiapkan materi dan PROMPT untuk Imagen 3
                 instruksi_format = """
-                Keluarkan hanya 3 bagian:
+                Keluarkan 4 bagian secara berurutan:
                 ===TAG_MATERI=== (Maksimal 3 kata spesifik)
-                ===NASKAH_LAYAR=== (Ini adalah penjelasan materi berbentuk HTML murni. WAJIB sisipkan 1 gambar ilustrasi. 
-                SANGAT PENTING - RAHASIA AGAR GAMBAR TIDAK JELEK: Jangan suruh AI menggambar diagram dengan teks. Suruh AI menggambar Ikon Vektor Klasik.
-                Gunakan format tag HTML ini persis:
-                <img src="https://image.pollinations.ai/prompt/SATU_KATA_BENDA_BAHASA_INGGRIS+simple+minimalist+black+and+white+vector+line+art+white+background+no+text?width=500&height=350&nologo=true&model=flux" style="width: 400px; max-width: 100%; display: block; margin: 20px auto; border-radius: 8px; mix-blend-mode: multiply;">
-                Ganti tulisan SATU_KATA_BENDA_BAHASA_INGGRIS dengan MAKSIMAL 1 atau 2 kata benda saja (contoh: leaf, volcano, rectangle). DILARANG menggunakan spasi di URL, gunakan tanda plus (+). DILARANG menggunakan format Markdown/LaTeX.)
+                ===PROMPT_GAMBAR=== (WAJIB: Tuliskan prompt deskripsi ilustrasi super detail dalam BAHASA INGGRIS untuk AI Image Generator. Contoh: "A highly detailed, beautiful illustration of a volcano erupting, educational textbook style, bright colors, no text, no words". DILARANG bahasa Indonesia, DILARANG ada teks dalam gambar.)
+                ===NASKAH_LAYAR=== (HTML murni. DILARANG memasukkan tag <img> di sini. Gunakan paragraf pendek dan tebalkan poin penting.)
                 ===KUIS=== (5 soal. Soal 4: [SIMULASI UJIAN NASIONAL HOTS] Pertanyaan?|||Opsi 1|||Opsi 2|||Opsi 3|||Kunci. Soal 5: [UJIAN LISAN] Pertanyaan?|||LISAN)
                 """
-                payload_ai = [f"Kamu Tutor AI {mapel} bernama {nama_asli_guru}. Susun materi: '{judul_materi}' untuk siswa bernama {nama_siswa} kelas {jenjang_kelas}. Sesuaikan gaya bahasa dengan anak usia {jenjang_kelas}.\n\n{instruksi_format}"]
+                payload_ai = [f"Kamu Tutor AI {mapel} bernama {nama_asli_guru}. Susun materi: '{judul_materi}' untuk {nama_siswa} kelas {jenjang_kelas}. Sesuaikan gaya bahasa.\n\n{instruksi_format}"]
                 if mode_belajar == "📸 Unggah Foto Buku":
                     payload_ai = [f"Kamu Tutor AI {mapel} bernama {nama_asli_guru}. Baca foto buku ini untuk {nama_siswa} kelas {jenjang_kelas}. Sesuaikan gaya bahasa.\n\n{instruksi_format}"] + [Image.open(f) for f in uploaded_files]
 
@@ -306,8 +303,13 @@ with tab_belajar:
                     full_text = response.text
                     
                     if "===TAG_MATERI===" in full_text:
-                        tag_mentah = re.search(r'===TAG_MATERI===(.*?)(?====NASKAH_LAYAR===|$)', full_text, re.DOTALL).group(1).strip().upper()
+                        tag_mentah = re.search(r'===TAG_MATERI===(.*?)(?====PROMPT_GAMBAR===|===NASKAH_LAYAR===|$)', full_text, re.DOTALL).group(1).strip().upper()
                         st.session_state.tag_materi = "".join(e for e in tag_mentah if e.isalnum() or e.isspace())
+                        
+                    if "===PROMPT_GAMBAR===" in full_text:
+                        prompt_mentah = re.search(r'===PROMPT_GAMBAR===(.*?)(?====NASKAH_LAYAR===|$)', full_text, re.DOTALL)
+                        if prompt_mentah:
+                            st.session_state.img_prompt = prompt_mentah.group(1).strip()
                     
                     if "===NASKAH_LAYAR===" in full_text: 
                         naskah_kotor = re.search(r'===NASKAH_LAYAR===(.*?)(?====KUIS===|$)', full_text, re.DOTALL).group(1).strip()
@@ -325,9 +327,47 @@ with tab_belajar:
                             if len(parts) == 2 and "LISAN" in parts[1]: parsed_kuis.append({"tipe": "lisan", "soal": parts[0].strip()})
                             elif len(parts) >= 5: parsed_kuis.append({"tipe": "pg", "soal": parts[0].strip(), "opsi": [parts[1].strip(), parts[2].strip(), parts[3].strip()], "kunci": parts[4].strip()})
                         st.session_state.daftar_kuis = parsed_kuis
-                    st.session_state.berhasil_baca = True
-                    st.rerun() 
-                except Exception as e: st.error(f"Gagal memproses AI: {e}")
+                        
+                except Exception as e: 
+                    st.error(f"Gagal memproses Teks AI: {e}")
+
+            # LANGKAH 2: Membayar Google Imagen 3 untuk Melukis Gambar Berkualitas Tinggi
+            if hasattr(st.session_state, 'img_prompt') and st.session_state.img_prompt:
+                with st.spinner("Sedang melukis gambar kualitas tinggi dengan mesin Google Imagen 3..."):
+                    try:
+                        img_result = client_gemini.models.generate_images(
+                            model='imagen-3.0-generate-001',
+                            prompt=st.session_state.img_prompt + ", highly detailed educational illustration, masterpiece, photorealistic or beautiful 2d art, NO TEXT, NO LETTERS, completely text-free",
+                            config=types.GenerateImagesConfig(
+                                number_of_images=1,
+                                aspect_ratio="4:3",
+                                output_mime_type="image/jpeg"
+                            )
+                        )
+                        if img_result.generated_images:
+                            img_bytes = img_result.generated_images[0].image.image_bytes
+                            img_b64 = base64.b64encode(img_bytes).decode('utf-8')
+                            
+                            st.session_state.img_html_final = f"""
+                            <div style="text-align: center; margin-bottom: 25px;">
+                                <img src="data:image/jpeg;base64,{img_b64}" style="width: 100%; max-width: 450px; border-radius: 12px; border: 2px solid #B3E5FC; box-shadow: 0 4px 10px rgba(0,0,0,0.05);">
+                                <p style="font-size: 13px; color: #0277BD; margin-top: 10px; font-weight: bold; font-style: italic;">🎨 Ilustrasi Premium ditenagai oleh Google Imagen 3</p>
+                            </div>
+                            """
+                    except Exception as img_error:
+                        print(f"Gagal memanggil Imagen 3: {img_error}")
+                        # Fallback jika gambar premium gagal
+                        safe_prompt = urllib.parse.quote(st.session_state.img_prompt + " simple clean educational art no text")
+                        img_url = f"https://image.pollinations.ai/prompt/{safe_prompt}?width=600&height=400&nologo=true"
+                        st.session_state.img_html_final = f"""
+                        <div style="text-align: center; margin-bottom: 25px;">
+                            <img src="{img_url}" style="width: 100%; max-width: 450px; border-radius: 12px; border: 2px solid #B3E5FC; box-shadow: 0 4px 10px rgba(0,0,0,0.05);">
+                            <p style="font-size: 13px; color: #555; margin-top: 10px; font-style: italic;">Ilustrasi Cadangan</p>
+                        </div>
+                        """
+
+            st.session_state.berhasil_baca = True
+            st.rerun()
 
     if st.session_state.berhasil_baca:
         st.markdown("---")
@@ -362,7 +402,6 @@ with tab_belajar:
             """
             script_trigger = "audioEl.addEventListener('play', () => {"
         else:
-            # Mengubah kotak warning menjadi kotak Info biru yang lebih "ramah" dipandang
             audio_html_element = """
             <div style="text-align:center; padding:15px; background:#E3F2FD; border-radius:10px; border: 1px solid #90CAF9; margin-bottom:20px;">
                 <p style="color: #1565C0; margin:0; font-weight:bold;">Teks Otomatis Sedang Berjalan ✍️</p>
@@ -371,12 +410,14 @@ with tab_belajar:
             """
             script_trigger = "setTimeout(() => {"
             
-        safe_html = st.session_state.naskah_layar.replace('\\', '\\\\').replace('`', '\\`').replace('$', '\\$')
+        # Menggabungkan Gambar Asli Imagen 3 + Teks Materi
+        naskah_gabungan = st.session_state.get('img_html_final', '') + st.session_state.naskah_layar
+        safe_html = naskah_gabungan.replace('\\', '\\\\').replace('`', '\\`').replace('$', '\\$')
         
         html_typewriter = f"""
         {audio_html_element}
         
-        <div id="scrollContainer" style="background-color:#F4FBFF; border-left:6px solid #2AB3FF; padding:25px; border-radius:10px; font-family:sans-serif; font-size:17px; line-height:1.7; height: 350px; overflow-y: auto; scroll-behavior: smooth; position: relative;">
+        <div id="scrollContainer" style="background-color:#F4FBFF; border-left:6px solid #2AB3FF; padding:25px; border-radius:10px; font-family:sans-serif; font-size:17px; line-height:1.7; height: 380px; overflow-y: auto; scroll-behavior: smooth; position: relative;">
             <div id="typewriterBox"></div>
         </div>
 
@@ -439,7 +480,7 @@ with tab_belajar:
             }}
         </script>
         """
-        components.html(html_typewriter, height=520)
+        components.html(html_typewriter, height=550)
 
         st.markdown("---")
         st.markdown(f"## 🏆 Latihan & Dapatkan POINT KAMU!")
@@ -520,8 +561,7 @@ with tab_belajar:
                                 if not is_lulus and koneksi_db_aktif:
                                     supabase.table("profil_siswa").update({"saldo_igil": saldo_saat_ini + 100}).eq("id", siswa_id).execute()
                                     supabase.table("histori_belajar").insert({"siswa_id": siswa_id, "mapel": mapel, "bab": st.session_state.tag_materi.title(), "skor": 100, "status_lulus": True}).execute()
-                                    if not is_lulus and penguasaan_materi + 1 >= BATAS_MASTER: 
-                                        st.balloons()
+                                    if not is_lulus and penguasaan_materi + 1 >= BATAS_MASTER: st.balloons()
                                 st.rerun()
                         else:
                             st.error(f"❌ **GAGAL/TIMEOUT! Nyawa berkurang 1.**\n\nAlasan AI: {hasil_teks}")
