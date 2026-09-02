@@ -17,82 +17,75 @@ from supabase import create_client, Client
 BATAS_MASTER = 5 
 NYAWA_MAKSIMAL = 3
 
-# --- KOSMETIK UI: TEMA NEON (PUTIH, HIJAU STABILO, UNGU GELAP) ---
+# --- KOSMETIK UI: TEMA PROFESIONAL & ELEGAN ---
 st.markdown("""
     <style>
-        /* 1. Latar Belakang PUTIH Bersih */
+        /* 1. Latar Belakang Bersih (Putih) */
         .stApp {
             background-color: #FFFFFF; 
         }
         
-        /* 2. Semua Teks berwarna UNGU GELAP */
+        /* 2. Tipografi Elegan (Dark Slate) */
         html, body, p, h1, h2, h3, h4, h5, h6, span, label, div {
-            color: #301934 !important;
-            font-family: 'Arial', sans-serif;
+            color: #1E293B !important;
+            font-family: 'Inter', 'Segoe UI', Roboto, sans-serif;
         }
 
-        /* 3. Tombol Utama (HIJAU STABILO) & Teks (UNGU GELAP) */
+        /* 3. Tombol Utama (Royal Blue - Elegan & Profesional) */
         .stButton>button {
-            background-color: #39FF14 !important; /* Hijau Stabilo */
-            color: #301934 !important; /* Ungu Gelap */
+            background-color: #2563EB !important;
+            color: #FFFFFF !important; /* Teks putih di dalam tombol biru */
             border-radius: 8px;
-            border: 2px solid #301934 !important; /* Garis tepi ungu gelap */
+            border: none !important;
             padding: 10px 24px;
-            font-size: 16px;
-            font-weight: 900; /* Ditebalkan agar kontras */
-            text-transform: uppercase;
-            box-shadow: 3px 3px 0px #301934; /* Bayangan solid gaya retro/Web3 */
+            font-size: 15px;
+            font-weight: 600;
+            box-shadow: 0 4px 6px -1px rgba(37, 99, 235, 0.2);
             transition: all 0.2s ease-in-out;
         }
-        
-        /* Efek saat tombol disentuh/diklik */
         .stButton>button:hover {
-            transform: translate(2px, 2px);
-            box-shadow: 1px 1px 0px #301934;
+            background-color: #1D4ED8 !important;
+            box-shadow: 0 10px 15px -3px rgba(37, 99, 235, 0.3);
+            transform: translateY(-2px);
         }
 
-        /* 4. Kotak Input Teks */
+        /* 4. Kotak Input Teks (Minimalis) */
         .stTextInput>div>div>input {
             border-radius: 8px;
-            border: 2px solid #301934 !important;
+            border: 1px solid #CBD5E1 !important;
             background-color: #FFFFFF !important;
-            color: #301934 !important;
-            font-weight: bold;
+            color: #1E293B !important;
+        }
+        .stTextInput>div>div>input:focus {
+            border: 2px solid #2563EB !important;
+            box-shadow: 0 0 0 1px #2563EB !important;
         }
 
-        /* 5. Desain Kotak Pesan (Info, Warning, Success) */
+        /* 5. Kotak Pesan (Info/Peringatan) - Bersih dengan garis samping */
         .stAlert {
-            background-color: #FFFFFF !important;
-            border: 2px solid #39FF14 !important; /* Garis Stabilo */
-            color: #301934 !important;
-            border-radius: 8px;
-            box-shadow: 2px 2px 0px #301934;
+            background-color: #F8FAFC !important;
+            border: none !important;
+            border-left: 4px solid #2563EB !important;
+            color: #1E293B !important;
+            border-radius: 6px;
+            box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
         }
 
-        /* 6. Tabs Navigasi (Ruang Belajar, Rapor, dsb) */
+        /* 6. Tabs Navigasi (Gaya Modern) */
         .stTabs [data-baseweb="tab-list"] {
-            gap: 10px;
+            border-bottom: 2px solid #F1F5F9;
+            gap: 20px;
         }
         .stTabs [data-baseweb="tab"] {
-            border-radius: 8px 8px 0px 0px;
-            background-color: #FFFFFF !important;
-            border: 2px solid #301934 !important;
-            border-bottom: none !important;
+            background-color: transparent !important;
+            border: none !important;
+            color: #64748B !important;
+            padding-bottom: 10px;
         }
-        /* Tab yang Sedang Aktif */
         .stTabs [aria-selected="true"] {
-            background-color: #39FF14 !important; /* Hijau Stabilo */
-            color: #301934 !important;
-            font-weight: 900;
-        }
-        
-        /* 7. Radio Button & Select Box */
-        div[role="radiogroup"] label {
-            background-color: #FFFFFF;
-            border: 2px solid #301934;
-            border-radius: 5px;
-            padding: 5px 10px;
-            margin-right: 5px;
+            color: #2563EB !important;
+            border-bottom: 3px solid #2563EB !important;
+            font-weight: 600;
         }
     </style>
 """, unsafe_allow_html=True)
