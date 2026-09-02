@@ -1,9 +1,7 @@
 import streamlit as st
-import streamlit.components.v1 as components
 import re
 import time
 import json
-import base64
 import uuid
 import os
 import urllib.parse
@@ -282,12 +280,13 @@ with tab_belajar:
             if os.path.exists(st.session_state.file_suara):
                 os.remove(st.session_state.file_suara)
             
-            with st.spinner(f"{nama_asli_guru} sedang menyiapkan materi dan sketsa ilustrasi untuk {jenjang_kelas}..."):
+            with st.spinner(f"{nama_asli_guru} sedang menyiapkan materi & gambar sketsa untuk {jenjang_kelas}..."):
+                # PERINTAH AI: Fokus ke HTML murni tanpa dibungkus animasi, dan 1 kata kunci gambar.
                 instruksi_format = """
                 Keluarkan 4 bagian secara berurutan:
                 ===TAG_MATERI=== (Maksimal 3 kata spesifik)
-                ===KATA_KUNCI_GAMBAR=== (WAJIB: Berikan HANYA 1 KATA BENDA tunggal dalam BAHASA INGGRIS untuk sketsa buku pelajaran. Contoh: apple, volcano, leaf, compass. DILARANG lebih dari 1 kata!)
-                ===NASKAH_LAYAR=== (Gunakan HTML murni dengan format menarik: gunakan tag <h3> untuk judul bagian, <b> untuk teks penting, dan <ul><li> untuk poin-poin penjelasan. DILARANG menggunakan tag <img...>. Buat penjelasan sangat atraktif untuk anak-anak.)
+                ===KATA_KUNCI_GAMBAR=== (WAJIB: Berikan HANYA 1 KATA BENDA TUNGGAL dalam BAHASA INGGRIS untuk sketsa. Contoh: volcano, heart, leaf. DILARANG lebih dari 1 kata!)
+                ===NASKAH_LAYAR=== (Gunakan HTML murni yang rapi. Gunakan <h3> untuk Judul Topik, <b> untuk menebalkan kata penting, <br> untuk garis baru, dan <ul><li> untuk poin. DILARANG memasukkan tag <img...>. Buat materi yang mendalam, seru, dan mudah dibaca anak-anak.)
                 ===KUIS=== (5 soal. Soal 4: [SIMULASI UJIAN NASIONAL HOTS] Pertanyaan?|||Opsi 1|||Opsi 2|||Opsi 3|||Kunci. Soal 5: [UJIAN LISAN] Pertanyaan?|||LISAN)
                 """
                 payload_ai = [f"Kamu Tutor AI {mapel} bernama {nama_asli_guru}. Susun materi: '{judul_materi}' untuk {nama_siswa} kelas {jenjang_kelas}. Sesuaikan gaya bahasa.\n\n{instruksi_format}"]
@@ -308,7 +307,7 @@ with tab_belajar:
                     
                     if "===NASKAH_LAYAR===" in full_text: 
                         naskah_kotor = re.search(r'===NASKAH_LAYAR===(.*?)(?====KUIS===|$)', full_text, re.DOTALL).group(1).strip()
-                        st.session_state.naskah_layar = naskah_kotor.replace('\n', '<br>')
+                        st.session_state.naskah_layar = naskah_kotor
                         
                         teks_suara_murni = re.sub(r'<[^>]+>', '', naskah_kotor) 
                         teks_suara_murni = re.sub(r'[*#_`>-]', '', teks_suara_murni) 
@@ -345,106 +344,31 @@ with tab_belajar:
 
         st.markdown(f"## 🎧 Dengarkan Penjelasan {nama_asli_guru}")
         
-        # --- SKetsa HITAM PUTIH MINIMALIS YANG BERSIH DI ATAS KARTU ---
-        # Menggunakan parameter URL eksplisit untuk memastikan garis hitam tegas dan latar belakang murni putih tanpa teks acak
-        clean_prompt = f"{st.session_state.img_keyword}, minimalist black and white line art vector sketch, textbook illustration, pure white background, absolutely no text, no letters"
-        safe_prompt_url = urllib.parse.quote(clean_prompt)
-        sketch_url = f"https://image.pollinations.ai/prompt/{safe_prompt_url}?width=400&height=250&nologo=true&seed=42"
-        
+        # 1. TAMPILKAN PEMUTAR SUARA SECARA LANGSUNG (NATIVE)
         audio_tersedia = os.path.exists(st.session_state.file_suara)
         if audio_tersedia:
-            with open(st.session_state.file_suara, "rb") as f: audio_b64 = base64.b64encode(f.read()).decode()
-            audio_tag = f'<audio id="guruAudio" controls style="width: 100%; max-width: 350px; margin-top: 10px;"><source src="data:audio/mp3;base64,{audio_b64}" type="audio/mp3"></audio>'
-            script_trigger = "audioEl.addEventListener('play', () => {"
-            petunjuk_teks = "▶️ Tekan Play untuk mendengarkan penjelasan"
+            st.audio(st.session_state.file_suara, format="audio/mp3")
         else:
-            audio_tag = '<p style="color: #1565C0; margin:5px 0 0 0; font-weight:bold; font-size:14px;">Teks Otomatis Sedang Berjalan ✍️</p>'
-            script_trigger = "setTimeout(() => {"
-            petunjuk_teks = "Sistem menyajikan naskah belajar interaktif..."
+            st.info("⚠️ Fitur Suara Guru AI Belum Aktif. Naskah otomatis ditampilkan di bawah.")
 
-        safe_html = st.session_state.naskah_layar.replace('\\', '\\\\').replace('`', '\\`').replace('$', '\\$')
+        # 2. TAMPILKAN GAMBAR SKETSA SECARA LANGSUNG (NATIVE)
+        clean_prompt = f"{st.session_state.img_keyword}, minimalist black and white line art vector sketch, textbook illustration, pure white background, absolutely no text, no letters"
+        safe_prompt_url = urllib.parse.quote(clean_prompt)
+        sketch_url = f"https://image.pollinations.ai/prompt/{safe_prompt_url}?width=600&height=400&nologo=true&seed=42"
         
-        html_typewriter = f"""
-        <div style="background-color:#ffffff; border-radius:16px; box-shadow: 0 8px 24px rgba(0,0,0,0.08); overflow:hidden; font-family:sans-serif; border: 1px solid #eaeaea; margin-bottom: 30px;">
-            
-            <!-- HEADER SKETSA HITAM PUTIH & KONTROL AUDIO -->
-            <div style="display: flex; flex-wrap: wrap; background: #f8fbfd; border-bottom: 3px solid #2AB3FF; padding: 20px; align-items: center; justify-content: space-around;">
-                <div style="text-align: center; margin: 5px;">
-                    <img src="{sketch_url}" style="width: 180px; height: 110px; object-fit: contain; background: white; border-radius: 8px; border: 1px solid #ddd; padding: 4px; box-shadow: 0 2px 5px rgba(0,0,0,0.05);">
-                    <div style="font-size: 11px; color: #666; margin-top: 4px; font-style: italic;">Sketsa: {st.session_state.img_keyword.title()}</div>
-                </div>
-                <div style="text-align: center; margin: 5px; flex-grow: 1; max-width: 380px;">
-                    {audio_tag}
-                    <p style="font-size:12px; color:#555; margin-top: 4px;">{petunjuk_teks}</p>
-                </div>
-            </div>
-            
-            <!-- WADAH TEKS ANIMASI DENGAN FORMATTING KAYA -->
-            <div id="scrollContainer" style="padding: 30px 40px; height: 360px; overflow-y: auto; scroll-behavior: smooth;">
-                <div id="typewriterBox"></div>
-            </div>
+        st.markdown(f"""
+        <div style="text-align: center; margin-top: 20px; margin-bottom: 30px;">
+            <img src="{sketch_url}" style="width: 100%; max-width: 500px; border-radius: 12px; border: 2px solid #ddd; padding: 10px; background: white; box-shadow: 0 4px 10px rgba(0,0,0,0.05);">
+            <p style="font-size: 14px; color: #666; font-style: italic; margin-top: 10px;">Sketsa Ilustrasi: {st.session_state.img_keyword.title()}</p>
         </div>
+        """, unsafe_allow_html=True)
 
-        <style>
-            #typewriterBox {{ color: #222; font-size: 16px; line-height: 1.8; }}
-            #typewriterBox h3 {{ color: #00838F; font-size: 22px; margin-top: 15px; margin-bottom: 10px; border-bottom: 2px solid #E0F7FA; padding-bottom: 4px; }}
-            #typewriterBox b {{ color: #B71C1C; background-color: #FFEBEE; padding: 2px 6px; border-radius: 4px; font-weight: bold; }}
-            #typewriterBox ul {{ background: #F1F8E9; padding: 15px 15px 15px 30px; border-radius: 8px; border-left: 4px solid #7CB342; margin: 15px 0; }}
-            #typewriterBox li {{ margin-bottom: 8px; color: #333; }}
-        </style>
-
-        <script>
-            const rawHTMLText = `{safe_html}`;
-            const targetDiv = document.getElementById("typewriterBox");
-            const scrollContainer = document.getElementById("scrollContainer");
-            const audioEl = document.getElementById("guruAudio");
-            
-            let isTyping = false;
-            let typedText = "";
-            let currentIndex = 0;
-            let typingInterval;
-            
-            const typingSpeedMs = 70; 
-            
-            function typeWriter() {{
-                if (currentIndex < rawHTMLText.length) {{
-                    if (rawHTMLText.charAt(currentIndex) === '<') {{
-                        let tag = "";
-                        while (rawHTMLText.charAt(currentIndex) !== '>' && currentIndex < rawHTMLText.length) {{
-                            tag += rawHTMLText.charAt(currentIndex);
-                            currentIndex++;
-                        }}
-                        tag += '>';
-                        typedText += tag;
-                        currentIndex++;
-                    }} else {{
-                        typedText += rawHTMLText.charAt(currentIndex);
-                        currentIndex++;
-                    }}
-                    targetDiv.innerHTML = typedText;
-                    scrollContainer.scrollTop = scrollContainer.scrollHeight;
-                }} else {{
-                    clearInterval(typingInterval);
-                }}
-            }}
-
-            {script_trigger}
-                if (!isTyping) {{
-                    isTyping = true;
-                    typedText = "";
-                    currentIndex = 0;
-                    targetDiv.innerHTML = "";
-                    typingInterval = setInterval(typeWriter, typingSpeedMs);
-                }}
-            {'});' if audio_tersedia else '}, 1000);'}
-
-            if(audioEl) {{
-                audioEl.addEventListener('pause', () => {{ clearInterval(typingInterval); isTyping = false; }});
-                audioEl.addEventListener('ended', () => {{ clearInterval(typingInterval); targetDiv.innerHTML = rawHTMLText; setTimeout(() => {{ scrollContainer.scrollTop = scrollContainer.scrollHeight; }}, 100); }});
-            }}
-        </script>
-        """
-        components.html(html_typewriter, height=750)
+        # 3. TAMPILKAN NASKAH SECARA LANGSUNG TANPA ANIMASI (NATIVE)
+        st.markdown(f"""
+        <div style="background-color: #F4FBFF; padding: 30px; border-radius: 15px; border-left: 6px solid #2AB3FF; font-size: 18px; line-height: 1.8; color: #333; box-shadow: 0 4px 12px rgba(0,0,0,0.05);">
+            {st.session_state.naskah_layar}
+        </div>
+        """, unsafe_allow_html=True)
 
         st.markdown("---")
         st.markdown(f"## 🏆 Latihan & Dapatkan POINT KAMU!")
@@ -589,6 +513,6 @@ with tab_leaderboard:
         for idx, p in enumerate(data_leaderboard_db):
             medali = "🥇" if idx == 0 else "🥈" if idx == 1 else "🥉" if idx == 2 else "🎓"
             warna_bg = "#E3F2FD" if p['nama'] == nama_siswa else "#FFFFFF"
-            html_leaderboard += f"<div style='display:flex; justify-content:space-between; padding:15px; margin-bottom:10px; background-color:{warna_bg}; border-radius:8px; border:1px solid #E0E0E0;'><div style='font-size:18px;'><b>{medali} Peringkat {idx+1}</b> - {p['nama']}</div><div style='font-size:18px; font-weight:bold; color:#00838F;`>{p['saldo_igil']} POINT KAMU</div></div>"
+            html_leaderboard += f"<div style='display:flex; justify-content:space-between; padding:15px; margin-bottom:10px; background-color:{warna_bg}; border-radius:8px; border:1px solid #E0E0E0;'><div style='font-size:18px;'><b>{medali} Peringkat {idx+1}</b> - {p['nama']}</div><div style='font-size:18px; font-weight:bold; color:#00838F;'>{p['saldo_igil']} POINT KAMU</div></div>"
         html_leaderboard += "</div>"
         st.markdown(html_leaderboard, unsafe_allow_html=True)
