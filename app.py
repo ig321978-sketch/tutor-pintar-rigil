@@ -282,15 +282,15 @@ with tab_belajar:
                  
             nama_asli_guru = st.session_state.guru_aktif['nama'].split('(')[0].strip()
             
-            # Hapus file audio lama jika ada agar tidak terjadi error bentrok
             if os.path.exists(st.session_state.file_suara):
                 os.remove(st.session_state.file_suara)
             
-            with st.spinner(f"{nama_asli_guru} sedang menyiapkan materi {mapel} bergambar untuk {jenjang_kelas}..."):
+            with st.spinner(f"{nama_asli_guru} sedang menyiapkan materi {mapel} dengan ilustrasi hitam putih..."):
+                # PERBAIKAN: Menambahkan perintah khusus 'black and white sketch illustration' dan CSS max-width 450px
                 instruksi_format = """
                 Keluarkan hanya 3 bagian:
                 ===TAG_MATERI=== (Maksimal 3 kata spesifik)
-                ===NASKAH_LAYAR=== (Ini adalah penjelasan materi berbentuk HTML murni. WAJIB sisipkan 1 atau 2 gambar ilustrasi dengan tag ini: <img src="https://image.pollinations.ai/prompt/DESKRIPSI+GAMBAR+BAHASA+INGGRIS?width=600&height=400&nologo=true" style="width:100%; border-radius:8px; margin: 15px 0;">. SANGAT PENTING: Gunakan tanda plus (+) untuk mengganti spasi pada URL gambar. DILARANG menggunakan tanda kutip/spasi di dalam URL. DILARANG menggunakan format Markdown/LaTeX.)
+                ===NASKAH_LAYAR=== (Ini adalah penjelasan materi berbentuk HTML murni. WAJIB sisipkan 1 atau 2 gambar ilustrasi dengan gaya HITAM PUTIH (seperti sketsa buku cetak) menggunakan tag ini: <img src="https://image.pollinations.ai/prompt/DESKRIPSI+GAMBAR+BAHASA+INGGRIS+black+and+white+sketch+illustration?width=600&height=400&nologo=true" style="max-width: 100%; width: 450px; display: block; margin: 15px auto; border-radius: 6px; border: 1px solid #ccc; box-shadow: 0 4px 6px rgba(0,0,0,0.05);">. SANGAT PENTING: Gunakan tanda plus (+) untuk mengganti spasi pada URL gambar. DILARANG menggunakan tanda kutip/spasi di dalam URL. DILARANG menggunakan format Markdown/LaTeX.)
                 ===KUIS=== (5 soal. Soal 4: [SIMULASI UJIAN NASIONAL HOTS] Pertanyaan?|||Opsi 1|||Opsi 2|||Opsi 3|||Kunci. Soal 5: [UJIAN LISAN] Pertanyaan?|||LISAN)
                 """
                 payload_ai = [f"Kamu Tutor AI {mapel} bernama {nama_asli_guru}. Susun materi: '{judul_materi}' untuk siswa bernama {nama_siswa} kelas {jenjang_kelas}. Sesuaikan gaya bahasa dengan anak usia {jenjang_kelas}.\n\n{instruksi_format}"]
@@ -330,7 +330,6 @@ with tab_belajar:
         nama_asli_guru = st.session_state.guru_aktif['nama'].split('(')[0].strip()
         is_lulus = penguasaan_materi >= BATAS_MASTER
         
-        # --- SISTEM GAMIFIKASI: SERTIFIKAT & LENCANA ---
         if is_lulus:
             st.markdown(f"""
             <div style="background-color: #FFF8E1; padding: 20px; border-radius: 15px; border: 2px dashed #FFC107; text-align: center; margin-bottom: 25px;">
@@ -345,7 +344,6 @@ with tab_belajar:
 
         st.markdown(f"## 🎧 Dengarkan Penjelasan {nama_asli_guru}")
         
-        # --- PERLINDUNGAN ANTI-CRASH JIKA AUDIO GAGAL DIBUAT ---
         audio_tersedia = os.path.exists(st.session_state.file_suara)
         
         if audio_tersedia:
@@ -360,14 +358,12 @@ with tab_belajar:
             """
             script_trigger = "audioEl.addEventListener('play', () => {"
         else:
-            # Fallback jika audio gagal/kredensial TTS belum diisi
             audio_html_element = """
             <div style="text-align:center; padding:15px; background:#FFF3E0; border-radius:10px; border: 1px solid #FFB74D; margin-bottom:20px;">
                 <p style="color: #E65100; margin:0; font-weight:bold;">⚠️ Fitur Suara Guru AI Belum Aktif</p>
-                <p style="font-size:12px; color:#E65100; margin-top:5px;">Sistem akan langsung menampilkan naskah secara otomatis.</p>
+                <p style="font-size:12px; color:#E65100; margin-top:5px;">Sistem akan langsung menampilkan naskah bergambar secara otomatis.</p>
             </div>
             """
-            # Otomatis menjalankan animasi saat halaman dimuat jika tidak ada tombol play
             script_trigger = "setTimeout(() => {"
             
         safe_html = st.session_state.naskah_layar.replace('\\', '\\\\').replace('`', '\\`').replace('$', '\\$')
@@ -390,7 +386,6 @@ with tab_belajar:
             let currentIndex = 0;
             let typingInterval;
             
-            // Kecepatan sangat diperlambat (110ms) agar selaras dengan lisan santai
             const typingSpeedMs = 110; 
             
             function typeWriter() {{
@@ -415,7 +410,6 @@ with tab_belajar:
                 }}
             }}
 
-            // Trigger dinamis (dari tombol Play ATAU otomatis)
             {script_trigger}
                 if (!isTyping) {{
                     isTyping = true;
@@ -521,8 +515,7 @@ with tab_belajar:
                                 if not is_lulus and koneksi_db_aktif:
                                     supabase.table("profil_siswa").update({"saldo_igil": saldo_saat_ini + 100}).eq("id", siswa_id).execute()
                                     supabase.table("histori_belajar").insert({"siswa_id": siswa_id, "mapel": mapel, "bab": st.session_state.tag_materi.title(), "skor": 100, "status_lulus": True}).execute()
-                                    if not is_lulus and penguasaan_materi + 1 >= BATAS_MASTER: 
-                                        st.balloons()
+                                    if not is_lulus and penguasaan_materi + 1 >= BATAS_MASTER: st.balloons()
                                 st.rerun()
                         else:
                             st.error(f"❌ **GAGAL/TIMEOUT! Nyawa berkurang 1.**\n\nAlasan AI: {hasil_teks}")
