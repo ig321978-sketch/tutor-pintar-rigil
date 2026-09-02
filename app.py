@@ -18,7 +18,62 @@ BATAS_MASTER = 5
 NYAWA_MAKSIMAL = 3
 
 st.set_page_config(page_title="$IGIL - Learn to Earn", page_icon="🎓", layout="centered")
+# --- KOSMETIK & CSS UI ---
+st.markdown("""
+    <style>
+        /* Mengubah warna latar belakang utama menjadi ceria (biru muda pastel) */
+        .stApp {
+            background-color: #F0F8FF; 
+        }
+        
+        /* Merapikan Font & Header */
+        h1, h2, h3 {
+            color: #2C3E50;
+            font-family: 'Comic Sans MS', 'Fredoka One', cursive, sans-serif;
+            text-align: center;
+        }
 
+        /* Mempercantik Tombol (Lebih bulat dan berwarna menarik) */
+        .stButton>button {
+            background-color: #FF9800; /* Warna Oranye Ceria */
+            color: white;
+            border-radius: 20px;
+            border: none;
+            padding: 10px 24px;
+            font-size: 16px;
+            font-weight: bold;
+            box-shadow: 0px 4px 6px rgba(0,0,0,0.1);
+            transition: 0.3s;
+        }
+        
+        .stButton>button:hover {
+            background-color: #E68A00;
+            transform: scale(1.05); /* Efek membesar saat disentuh */
+        }
+
+        /* Mempercantik Kotak Input Teks */
+        .stTextInput>div>div>input {
+            border-radius: 15px;
+            border: 2px solid #4CAF50;
+        }
+
+        /* Merapikan Tabs (Ruang Belajar, Rapor, Papan Peringkat) */
+        .stTabs [data-baseweb="tab-list"] {
+            gap: 10px;
+            justify-content: center;
+        }
+        .stTabs [data-baseweb="tab"] {
+            border-radius: 10px 10px 0px 0px;
+            background-color: #E0E0E0;
+            padding: 10px 20px;
+        }
+        .stTabs [aria-selected="true"] {
+            background-color: #4CAF50 !important; /* Hijau saat tab aktif */
+            color: white !important;
+            font-weight: bold;
+        }
+    </style>
+""", unsafe_allow_html=True)
 # --- INISIALISASI KONEKSI SUPABASE ---
 @st.cache_resource
 def init_supabase() -> Client:
